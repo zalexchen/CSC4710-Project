@@ -2,6 +2,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.util.Date;
 import java.util.List;
  
 import javax.servlet.RequestDispatcher;
@@ -14,6 +15,8 @@ import javax.servlet.http.HttpServletResponse;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.Statement;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.sql.PreparedStatement;
  
 /**
@@ -58,11 +61,26 @@ public class ControlServlet extends HttpServlet {
             case "/update":
             	updatePeople(request, response);
                 break;
+            case "/test":
+            	intializeTenUsers(request, response);
+            	break;
+            case "/home":
+            	showLoginForm(request, response);
+            	break;
+            case "/login":
+            	loginUser(request, response);
+            	break;
+            case "/newUser":
+            	showRegisterForm(request, response);
+            	break;
+            case "/register":
+            	registerUser(request, response);
+            	break;
             default:          	
             	listPeople(request, response);           	
                 break;
             }
-        } catch (SQLException ex) {
+        } catch (SQLException | ParseException ex) {
             throw new ServletException(ex);
         }
     }
@@ -126,7 +144,66 @@ public class ControlServlet extends HttpServlet {
         int id = Integer.parseInt(request.getParameter("id"));
         //People people = new People(id);
         peopleDAO.delete(id);
-        response.sendRedirect("list"); 
+        response.sendRedirect("list");  
+    }
+    
+    private void intializeTenUsers(HttpServletRequest request, HttpServletResponse response)
+    		throws SQLException, IOException {
+    	System.out.println("Got to intializeTenUsers() in ControlServlet");
+    	peopleDAO.intializeTenUsers();
+    	System.out.println("Sending Redirect Link");
+    	response.sendRedirect("default"); //this just sends a redirect to /default which because
+    	//ControlServlet in web.xml file is mapped to a general url /, it gets recieves the request
+    	//Essentially a redirect back to itself
+    	System.out.println("End intializeTenUsers()");
+    }
+    
+    private void loginUser(HttpServletRequest request, HttpServletResponse response) throws SQLException, IOException, ServletException {
+    	System.out.println("Got to loginUsers() in ControlServlet");
+    	String email = request.getParameter("email");
+    	String password = request.getParameter("password");
+    	System.out.println("Starting login authentication");
+    	if(peopleDAO.loginAuthentication(email, password)) {
+    		//redirect to main page
+    		response.sendRedirect("main");
+    	}
+    	else {
+    		//redirect to login page
+    		RequestDispatcher dispatcher = request.getRequestDispatcher("LoginForm.jsp");
+            dispatcher.forward(request, response);
+    	}
+    	System.out.println("End LoginUser()");
+    }
+    
+    private void registerUser(HttpServletRequest request, HttpServletResponse response) throws SQLException, IOException, ServletException, ParseException {
+    	System.out.println("Got to registerUsers() in ControlServlet");
+    	String email = request.getParameter("email");
+        String password = request.getParameter("password");
+        
+        SimpleDateFormat format = new SimpleDateFormat();
+        Date bday = format.parse(request.getParameter("bday"));
+        
+        String firstName = request.getParameter("firstName");
+        String lastName = request.getParameter("lastName");
+        String gender = request.getParameter("gender");
+        
+        User newUser = new User(email, password, bday, firstName, lastName, gender);
+        peopleDAO.registerUser(newUser);
+        RequestDispatcher dispatcher = request.getRequestDispatcher("LoginForm.jsp");
+        dispatcher.forward(request, response);
+        System.out.println("End registerUser() in ControlServlet");
+    }
+    
+    private void showLoginForm(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        RequestDispatcher dispatcher = request.getRequestDispatcher("LoginForm.jsp");
+        dispatcher.forward(request, response);
+    }
+    
+    private void showRegisterForm(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        RequestDispatcher dispatcher = request.getRequestDispatcher("RegisterForm.jsp");
+        dispatcher.forward(request, response);
     }
 
 }

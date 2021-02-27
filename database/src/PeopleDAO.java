@@ -10,6 +10,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import java.sql.Connection;
+import java.sql.Date;
 import java.sql.DriverManager;
 import java.sql.Statement;
 import java.sql.PreparedStatement;
@@ -152,5 +153,83 @@ public class PeopleDAO {
         statement.close();
          
         return people;
+    }
+    
+    public void intializeTenUsers() throws SQLException {
+    	System.out.println("Initializing Users Start");
+    	
+    	connect_func();
+    	String sql1 = "DROP TABLE IF EXISTS testUsers";
+        String sql2 = "CREATE TABLE IF NOT EXISTS testUsers(" +
+                " email VARCHAR(50), " + 
+                " password VARCHAR(50), " + 
+                " bday date, " + 
+                " firstName VARCHAR(50), " +
+                " lastName VARCHAR(50), " +
+                " gender CHAR(1), " +
+                " PRIMARY KEY ( email ))";
+        String sql3 = "INSERT INTO testUsers(email, password, bday, firstName, lastName, gender) VALUES ('test@1234', 'test1234', CURDATE(), 'test', 'est', 'M')";
+        String sql4 = "INSERT INTO testUsers(email, password, bday, firstName, lastName, gender) VALUES ('guy@wayne', 'password', CURDATE(), 'testz', 'eszt', 'F')";
+        String sql5 = "INSERT INTO testUsers(email, password, bday, firstName, lastName, gender) VALUES ('something@12345', 'password1234', CURDATE(), 'something', 'est', 'F')";
+        String sql6 = "INSERT INTO testUsers(email, password, bday, firstName, lastName, gender) VALUES ('random@gmail', 'asdfjkljfdsa', CURDATE(), 'asdjkfl;', ';jfdas', 'M')";
+        String sql7 = "INSERT INTO testUsers(email, password, bday, firstName, lastName, gender) VALUES ('person@protect', 'qweruipuirewq', CURDATE(), 'asdf', 'asdf', 'O')";
+        statement = connect.createStatement();
+        System.out.println("Executing Statements");
+        statement.executeUpdate(sql1);
+        System.out.println("Executed SQL 1");
+        statement.executeUpdate(sql2);
+        System.out.println("Executed SQL 2");
+        statement.executeUpdate(sql3);
+        System.out.println("Executed SQL 3");
+        
+        statement.executeUpdate(sql4);
+        statement.executeUpdate(sql5);
+        statement.executeUpdate(sql6);
+        statement.executeUpdate(sql7);
+        
+        
+        System.out.println("Initializing Users End");
+    }
+    
+    public boolean loginAuthentication(String email, String password) throws SQLException {
+    	System.out.println("LoginAuthentication() in PeopleDAO");
+    	//if email and password combination is in database, then return true
+    	connect_func();
+    	
+    	System.out.println("Got email: " + email + " and password: " + password);
+    	String sql1 = "SELECT * FROM testUsers U " +
+    				"WHERE email = ? AND password = ?";
+    	
+    	preparedStatement = connect.prepareStatement(sql1);
+    	preparedStatement.setString(1, email);
+    	preparedStatement.setString(2, password);
+    	System.out.println("Statement prepared");
+    	ResultSet resultSet = preparedStatement.executeQuery();
+    	System.out.println("Executed statement");
+    	if(resultSet.next()) {
+    		System.out.println("Email: " + resultSet.getString("email"));
+    		System.out.println("loginAuthentication Returned True");
+    		return true;
+    	}
+    	System.out.println("loginAuthentication Returned False");
+    	return false;
+    }
+    
+    public boolean registerUser(User user) throws SQLException {
+    	System.out.println("Got to registerUser() in peopleDAO");
+    	connect_func();         
+		String sql1 = "INSERT into testusers(email, password, bday, firstName, lastName, gender) values (?, ?, ?, ?, ?, ?)";
+		preparedStatement = (PreparedStatement) connect.prepareStatement(sql1);
+		preparedStatement.setString(1, user.email);
+		preparedStatement.setString(2, user.password);
+		preparedStatement.setDate(3, (Date) user.bday);
+		preparedStatement.setString(4, user.firstName);
+		preparedStatement.setString(5, user.lastName);
+		preparedStatement.setString(6, user.gender);
+		
+        boolean userRegistered = preparedStatement.executeUpdate() > 0;
+        preparedStatement.close();
+        System.out.println("End registerUser() in peopleDAO");
+        return userRegistered;
     }
 }

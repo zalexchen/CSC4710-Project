@@ -16,7 +16,9 @@
         </h2>
     </center>
     <div align="center">
-            <form action="update" method="post">
+    
+    	<!--  Form action UPDATE -->
+        <form action="update" method="post">
         <table border="1" cellpadding="5">
             <caption>
                 <h2>Edit an Existing People</h2>
