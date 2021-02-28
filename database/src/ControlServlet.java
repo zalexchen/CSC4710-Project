@@ -2,7 +2,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.sql.DriverManager;
 import java.sql.SQLException;
-import java.util.Date;
+import java.sql.Date;
 import java.util.List;
  
 import javax.servlet.RequestDispatcher;
@@ -180,8 +180,7 @@ public class ControlServlet extends HttpServlet {
     	String email = request.getParameter("email");
         String password = request.getParameter("password");
         
-        SimpleDateFormat format = new SimpleDateFormat();
-        Date bday = format.parse(request.getParameter("bday"));
+        Date bday = Date.valueOf(request.getParameter("bday"));
         
         String firstName = request.getParameter("firstName");
         String lastName = request.getParameter("lastName");

@@ -166,7 +166,7 @@ public class PeopleDAO {
                 " bday date, " + 
                 " firstName VARCHAR(50), " +
                 " lastName VARCHAR(50), " +
-                " gender CHAR(1), " +
+                " gender VARCHAR(10), " +
                 " PRIMARY KEY ( email ))";
         String sql3 = "INSERT INTO testUsers(email, password, bday, firstName, lastName, gender) VALUES ('test@1234', 'test1234', CURDATE(), 'test', 'est', 'M')";
         String sql4 = "INSERT INTO testUsers(email, password, bday, firstName, lastName, gender) VALUES ('guy@wayne', 'password', CURDATE(), 'testz', 'eszt', 'F')";
@@ -217,12 +217,12 @@ public class PeopleDAO {
     
     public boolean registerUser(User user) throws SQLException {
     	System.out.println("Got to registerUser() in peopleDAO");
-    	connect_func();         
+    	connect_func();
 		String sql1 = "INSERT into testusers(email, password, bday, firstName, lastName, gender) values (?, ?, ?, ?, ?, ?)";
 		preparedStatement = (PreparedStatement) connect.prepareStatement(sql1);
 		preparedStatement.setString(1, user.email);
 		preparedStatement.setString(2, user.password);
-		preparedStatement.setDate(3, (Date) user.bday);
+		preparedStatement.setDate(3, user.bday);
 		preparedStatement.setString(4, user.firstName);
 		preparedStatement.setString(5, user.lastName);
 		preparedStatement.setString(6, user.gender);
