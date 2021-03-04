@@ -29,7 +29,7 @@ public class PeopleDAO {
 	private Connection connect = null; //jdbc Connection
 	private Statement statement = null; 
 	private PreparedStatement preparedStatement = null;
-	private ResultSet resultSet = null; //not used
+	private ResultSet resultSet = null;
 	
 	
 	public PeopleDAO() {
@@ -53,140 +53,257 @@ public class PeopleDAO {
         }
     }
     
-    //Returns the list of all "people" from the database
-    public List<People> listAllPeople() throws SQLException {
-        List<People> listPeople = new ArrayList<People>();        
-        String sql = "SELECT * FROM student";      
-        connect_func();      
-        statement =  (Statement) connect.createStatement();
-        ResultSet resultSet = statement.executeQuery(sql);
-         
-        while (resultSet.next()) {
-            int id = resultSet.getInt("id");
-            String name = resultSet.getString("name");
-            String address = resultSet.getString("address");
-            String status = resultSet.getString("status");
-             
-            People people = new People(id,name, address, status);
-            listPeople.add(people);
-        }        
-        resultSet.close();
-        statement.close();         
-        disconnect();        
-        return listPeople;
-    }
-    
     //Utility function to disconnect from the database server
     protected void disconnect() throws SQLException {
         if (connect != null && !connect.isClosed()) {
         	connect.close();
         }
     }
-        
-    //Inserting a User
-    public boolean insert(People people) throws SQLException {
-    	connect_func();         
-		String sql = "insert into  student(Name, Address, Status) values (?, ?, ?)";
-		preparedStatement = (PreparedStatement) connect.prepareStatement(sql);
-		preparedStatement.setString(1, people.name);
-		preparedStatement.setString(2, people.address);
-		preparedStatement.setString(3, people.status);
-//		preparedStatement.executeUpdate();
-		
-        boolean rowInserted = preparedStatement.executeUpdate() > 0;
-        preparedStatement.close();
-//        disconnect();
-        return rowInserted;
-    }     
     
-    //
-    public boolean delete(int peopleid) throws SQLException {
-        String sql = "DELETE FROM student WHERE id = ?";        
-        connect_func();
+    public List<User> listAllUsers() throws SQLException {
+        List<User> listUsers = new ArrayList<User>();        
+        String sql = "SELECT * FROM Users";      
+        connect_func();      
+        statement =  (Statement) connect.createStatement();
+        ResultSet resultSet = statement.executeQuery(sql);
          
-        preparedStatement = (PreparedStatement) connect.prepareStatement(sql);
-        preparedStatement.setInt(1, peopleid);
-         
-        boolean rowDeleted = preparedStatement.executeUpdate() > 0;
-        preparedStatement.close();
-//        disconnect();
-        return rowDeleted;     
-    }
-     
-    public boolean update(People people) throws SQLException {
-        String sql = "update student set Name=?, Address =?,Status = ? where id = ?";
-        connect_func();
-        
-        preparedStatement = (PreparedStatement) connect.prepareStatement(sql);
-        preparedStatement.setString(1, people.name);
-        preparedStatement.setString(2, people.address);
-        preparedStatement.setString(3, people.status);
-        preparedStatement.setInt(4, people.id);
-         
-        boolean rowUpdated = preparedStatement.executeUpdate() > 0;
-        preparedStatement.close();
-//        disconnect();
-        return rowUpdated;     
-    }
-	
-    //
-    public People getPeople(int id) throws SQLException {
-    	People people = null;
-        String sql = "SELECT * FROM student WHERE id = ?";
-         
-        connect_func();
-         
-        preparedStatement = (PreparedStatement) connect.prepareStatement(sql);
-        preparedStatement.setInt(1, id);
-         
-        ResultSet resultSet = preparedStatement.executeQuery();
-         
-        if (resultSet.next()) {
-            String name = resultSet.getString("name");
-            String address = resultSet.getString("address");
-            String status = resultSet.getString("status");
+        while (resultSet.next()) {
+            String email = resultSet.getString("email");
+            String password = resultSet.getString("password");
+            Date birthday = resultSet.getDate("birthday");
+            String firstName = resultSet.getString("firstName");
+            String lastName = resultSet.getString("lastName");
+            String gender = resultSet.getString("gender");
+            int numFollowers = resultSet.getInt("numFollowers");
+            int numFollowing = resultSet.getInt("numFollowing");
              
-            people = new People(id, name, address, status);
-        }
-        
+            User newUser = new User(email, password, birthday, firstName, lastName, gender, numFollowers, numFollowing);
+            listUsers.add(newUser);
+            System.out.println("Added a user to listUsers");
+        }        
         resultSet.close();
-        statement.close();
-         
-        return people;
+        statement.close();         
+        disconnect();
+        System.out.println("Returning listUsers");
+        return listUsers;
     }
     
-    public void intializeTenUsers() throws SQLException {
-    	System.out.println("Initializing Users Start");
-    	
+    public void initializeDatabase() throws SQLException {
+    	System.out.println("initDB Start");
     	connect_func();
-    	String sql1 = "DROP TABLE IF EXISTS testUsers";
-        String sql2 = "CREATE TABLE IF NOT EXISTS testUsers(" +
-                " email VARCHAR(50), " + 
-                " password VARCHAR(50), " + 
-                " bday date, " + 
-                " firstName VARCHAR(50), " +
-                " lastName VARCHAR(50), " +
-                " gender VARCHAR(10), " +
-                " PRIMARY KEY ( email ))";
-        String sql3 = "INSERT INTO testUsers(email, password, bday, firstName, lastName, gender) VALUES ('test@1234', 'test1234', CURDATE(), 'test', 'est', 'M')";
-        String sql4 = "INSERT INTO testUsers(email, password, bday, firstName, lastName, gender) VALUES ('guy@wayne', 'password', CURDATE(), 'testz', 'eszt', 'F')";
-        String sql5 = "INSERT INTO testUsers(email, password, bday, firstName, lastName, gender) VALUES ('something@12345', 'password1234', CURDATE(), 'something', 'est', 'F')";
-        String sql6 = "INSERT INTO testUsers(email, password, bday, firstName, lastName, gender) VALUES ('random@gmail', 'asdfjkljfdsa', CURDATE(), 'asdjkfl;', ';jfdas', 'M')";
-        String sql7 = "INSERT INTO testUsers(email, password, bday, firstName, lastName, gender) VALUES ('person@protect', 'qweruipuirewq', CURDATE(), 'asdf', 'asdf', 'O')";
-        statement = connect.createStatement();
-        System.out.println("Executing Statements");
+    	dropDatabase();
+    	initializeTenUsers();
+    	initializeImages();
+    	initializeLikes();
+    	initializeComments();
+    	initializeTag();
+    	initializeFollow();
+    	System.out.println("initDB End");
+    }
+    
+    public void dropDatabase() throws SQLException {
+    	System.out.println("dropDatabase Start");
+    	String sql1 = "DROP TABLE IF EXISTS Tags";
+    	String sql2 = "DROP TABLE IF EXISTS Comments";
+    	String sql3 = "DROP TABLE IF EXISTS Follow";
+    	String sql4 = "DROP TABLE IF EXISTS Likes";
+    	String sql5 = "DROP TABLE IF EXISTS Images";
+    	String sql6 = "DROP TABLE IF EXISTS Users";
+    	
+    	statement = connect.createStatement();
         statement.executeUpdate(sql1);
-        System.out.println("Executed SQL 1");
         statement.executeUpdate(sql2);
-        System.out.println("Executed SQL 2");
         statement.executeUpdate(sql3);
-        System.out.println("Executed SQL 3");
-        
         statement.executeUpdate(sql4);
         statement.executeUpdate(sql5);
         statement.executeUpdate(sql6);
-        statement.executeUpdate(sql7);
         
+        System.out.println("dropDatabase End");
+    }
+    
+    public void initializeImages() throws SQLException {
+    	System.out.println("initImages Start");
+    	String sql1 = "DROP TABLE IF EXISTS Images";
+        String sql2 = "CREATE TABLE IF NOT EXISTS Images(" +
+                " imageid MEDIUMINT NOT NULL AUTO_INCREMENT, " + 
+                " url VARCHAR(150), " + 
+                " description VARCHAR(100), " + 
+                " postuser VARCHAR(100) NOT NULL, " +
+                " postdate DATE, " +
+                " posttime DATETIME, " +
+                " PRIMARY KEY(imageid), " +
+                " FOREIGN KEY(postuser) references Users(email))";
+        String sql3 = "INSERT INTO Images(imageid, url, description, postuser, posttime) VALUES"
+        		+ " (1, 'https://picsum.photos/id/1/200/300', '1st Picture', 'test@wayne', CURDATE()),"
+        		+ "(2, 'https://picsum.photos/id/2/200/300', '2nd Picture', 'guy@wayne', CURDATE()),"
+        		+ "(3, 'https://picsum.photos/id/3/200/300', '3rd Picture', 'something@gmail', CURDATE()),"
+        		+ "(4, 'https://picsum.photos/id/4/200/300', '4th Picture', 'test@wayne', CURDATE()),"
+        		+ "(5, 'https://picsum.photos/id/5/200/300', '5th Picture', 'guy@wayne', CURDATE()),"
+        		+ "(6, 'https://picsum.photos/id/6/200/300', '6th Picture', 'something@gmail', CURDATE()),"
+        		+ "(7, 'https://picsum.photos/id/7/200/300', '7th Picture', 'alex@outlook', CURDATE()),"
+        		+ "(8, 'https://picsum.photos/id/8/200/300', '8th Picture', 'person@protect', CURDATE()),"
+        		+ "(9, 'https://picsum.photos/id/9/200/300', '9th Picture', 'programmer@gmail', CURDATE()),"
+        		+ "(10, 'https://picsum.photos/id/10/200/300', '10th Picture', 'random@gmail', CURDATE())";
+        statement = connect.createStatement();
+        statement.executeUpdate(sql1);
+        System.out.println("Drop table");
+        statement.executeUpdate(sql2);
+        System.out.println("Created table");
+        statement.executeUpdate(sql3);
+        System.out.println("Inserted table");
+        
+        System.out.println("initImages End");
+    }
+    
+    public void initializeLikes() throws SQLException {
+    	System.out.println("initLikes Start");
+    	String sql1 = "DROP TABLE IF EXISTS Likes";
+        String sql2 = "CREATE TABLE IF NOT EXISTS Likes(" +
+                " email VARCHAR(100) NOT NULL," + 
+                " imageid MEDIUMINT NOT NULL, " + 
+                " likedate DATE, " +
+                " PRIMARY KEY(email, imageid), " +
+                " FOREIGN KEY(email) references Users(email), " +
+                " FOREIGN KEY(imageid) references Images(imageid))";
+        String sql3 = "INSERT INTO Likes(email, imageid, likedate) VALUES"
+        		+ " ('test@wayne', 1, CURDATE()),"
+        		+ " ('guy@wayne', 1, CURDATE()),"
+        		+ " ('something@gmail', 1, CURDATE()),"
+        		+ " ('random@gmail', 1, CURDATE()),"
+        		+ " ('alex@outlook', 1, CURDATE()),"
+        		+ " ('aliveguy@wayne', 1, CURDATE()),"
+        		+ " ('person@protect', 1, CURDATE()),"
+        		+ " ('bodyguard@protect', 1, CURDATE()),"
+        		+ " ('progamer@gmail', 1, CURDATE()),"
+        		+ " ('programmer@gmail', 1, CURDATE())";
+        
+        statement = connect.createStatement();
+        statement.executeUpdate(sql1);
+        System.out.println("Dropped Table");
+        statement.executeUpdate(sql2);
+        System.out.println("Create Likes");
+        statement.executeUpdate(sql3);
+        System.out.println("Insert Likes");
+        
+        System.out.println("initLikes End");
+    }
+    
+    public void initializeComments() throws SQLException {
+    	System.out.println("initComments Start");
+    	String sql1 = "DROP TABLE IF EXISTS Comments";
+        String sql2 = "CREATE TABLE IF NOT EXISTS Comments(" +
+                " email VARCHAR(100) NOT NULL," + 
+                " imageid MEDIUMINT NOT NULL, " + 
+                " description VARCHAR(500), " +
+                " PRIMARY KEY(email, imageid), " +
+                " FOREIGN KEY(email) references Users(email), " +
+                " FOREIGN KEY(imageid) references Images(imageid))";
+        String sql3 = "INSERT INTO Comments(email, imageid, description) VALUES"
+        		+ " ('test@wayne', 1, 'Hello'),"
+        		+ " ('guy@wayne', 1, 'World'),"
+        		+ " ('something@gmail', 1, 'Pizza'),"
+        		+ " ('random@gmail', 1, 'Is'),"
+        		+ " ('alex@outlook', 1, 'Pretty'),"
+        		+ " ('aliveguy@wayne', 1, 'Good'),"
+        		+ " ('person@protect', 1, 'Unless'),"
+        		+ " ('bodyguard@protect', 1, 'Its'),"
+        		+ " ('progamer@gmail', 1, 'Pineapple'),"
+        		+ " ('programmer@gmail', 1, 'Pizza')";
+        
+        statement = connect.createStatement();
+        statement.executeUpdate(sql1);
+        statement.executeUpdate(sql2);
+        statement.executeUpdate(sql3);
+        
+        System.out.println("initComments End");
+    }
+    
+    public void initializeTag() throws SQLException {
+    	System.out.println("initTag Start");
+    	String sql1 = "DROP TABLE IF EXISTS Tags";
+        String sql2 = "CREATE TABLE IF NOT EXISTS Tags(" +
+                " imageid MEDIUMINT NOT NULL, " + 
+                " tag VARCHAR(20) NOT NULL, " + 
+                " PRIMARY KEY(imageid, tag), " +
+                " FOREIGN KEY(imageid) references Images(imageid))";
+        String sql3 = "INSERT INTO Tags(imageid, tag) VALUES"
+        		+ " (1, 'Coffee'),"
+        		+ " (2, 'Book'),"
+        		+ " (3, 'Awesome'),"
+        		+ " (4, 'Sick'),"
+        		+ " (5, 'Chill'),"
+        		+ " (6, 'Something'),"
+        		+ " (7, 'Tagged'),"
+        		+ " (8, 'Famous'),"
+        		+ " (9, 'Cool'),"
+        		+ " (10, 'People')";
+        
+        statement = connect.createStatement();
+        statement.executeUpdate(sql1);
+        statement.executeUpdate(sql2);
+        statement.executeUpdate(sql3);
+        
+        System.out.println("initTag End");
+    }
+    
+    public void initializeFollow() throws SQLException {
+    	System.out.println("initFollow Start");
+    	String sql1 = "DROP TABLE IF EXISTS Follow";
+        String sql2 = "CREATE TABLE IF NOT EXISTS Follow(" +
+                " followingemail VARCHAR(100) NOT NULL," + 
+                " followeremail VARCHAR(100) NOT NULL, " +
+                " PRIMARY KEY(followingemail, followeremail), " +
+                " FOREIGN KEY(followingemail) references Users(email), " +
+                " FOREIGN KEY(followeremail) references Users(email))";
+        String sql3 = "INSERT INTO Follow(followingemail, followeremail) VALUES"
+        		+ " ('test@wayne', 'guy@wayne'),"
+        		+ " ('test@wayne', 'something@gmail'),"
+        		+ " ('test@wayne', 'random@gmail'),"
+        		+ " ('test@wayne', 'alex@outlook'),"
+        		+ " ('test@wayne', 'aliveguy@wayne'),"
+        		+ " ('test@wayne', 'person@protect'),"
+        		+ " ('test@wayne', 'bodyguard@protect'),"
+        		+ " ('test@wayne', 'progamer@gmail'),"
+        		+ " ('test@wayne', 'programmer@gmail'),"
+        		+ " ('guy@wayne', 'test@wayne')";
+        statement = connect.createStatement();
+        statement.executeUpdate(sql1);
+        statement.executeUpdate(sql2);
+        statement.executeUpdate(sql3);
+        
+        System.out.println("Initializing Follow End");
+    }
+    
+    public void initializeTenUsers() throws SQLException {
+    	System.out.println("Initializing Users Start");
+    	
+    	//connect_func();
+    	String sql1 = "DROP TABLE IF EXISTS Users";
+        String sql2 = "CREATE TABLE IF NOT EXISTS Users(" +
+                " email VARCHAR(100) NOT NULL, " + 
+                " password VARCHAR(20), " + 
+                " birthday date, " + 
+                " firstName VARCHAR(50), " +
+                " lastName VARCHAR(50), " +
+                " gender CHAR(1), " +
+                " numFollowers INTEGER, " +
+                " numFollowing INTEGER, " +
+                " PRIMARY KEY ( email ))";
+        String sql3 = "INSERT INTO Users(email, password, birthday, firstName, lastName, gender, numFollowers, numFollowing) VALUES"
+        		+ " ('test@wayne', 'test1234', CURDATE(), 'Test', 'Guy', 'M', 0, 0),"
+        		+ " ('guy@wayne', 'password', CURDATE(), 'Guy', 'Person', 'F', 0, 0),"
+        		+ "('something@gmail', 'password1234', CURDATE(), 'Something', 'Person', 'F', 0, 0),"
+        		+ "('random@gmail', 'password5678', CURDATE(), 'Random', 'Person', 'M', 0, 0),"
+        		+ "('alex@outlook', 'alex12321', CURDATE(), 'Alex', 'Chen', 'M', 0, 0),"
+        		+ "('aliveguy@wayne', 'alive12321', CURDATE(), 'Alive', 'Guy', 'O', 0, 0),"
+        		+ "('person@protect', 'password333', CURDATE(), 'Person', 'Protect', 'O', 0, 0),"
+        		+ "('bodyguard@protect', 'bodyguard', CURDATE(), 'Body', 'Guard', 'O', 0, 0),"
+        		+ "('progamer@gmail', 'easypassword', CURDATE(), 'Pro', 'Gamer', 'M', 0, 0),"
+        		+ "('programmer@gmail', 'hardpassword', CURDATE(), 'Pro', 'Grammer', 'F', 0, 0)";
+        statement = connect.createStatement();
+        statement.executeUpdate(sql1);
+        statement.executeUpdate(sql2);
+        statement.executeUpdate(sql3);
         
         System.out.println("Initializing Users End");
     }
@@ -197,7 +314,7 @@ public class PeopleDAO {
     	connect_func();
     	
     	System.out.println("Got email: " + email + " and password: " + password);
-    	String sql1 = "SELECT * FROM testUsers U " +
+    	String sql1 = "SELECT * FROM Users U " +
     				"WHERE email = ? AND password = ?";
     	
     	preparedStatement = connect.prepareStatement(sql1);
@@ -218,14 +335,20 @@ public class PeopleDAO {
     public boolean registerUser(User user) throws SQLException {
     	System.out.println("Got to registerUser() in peopleDAO");
     	connect_func();
-		String sql1 = "INSERT into testusers(email, password, bday, firstName, lastName, gender) values (?, ?, ?, ?, ?, ?)";
+		String sql1 = "INSERT into Users(email, password, birthday, firstName, lastName, gender, numFollowers, numFollowing) values (?, ?, ?, ?, ?, ?, 0, 0)";
 		preparedStatement = (PreparedStatement) connect.prepareStatement(sql1);
 		preparedStatement.setString(1, user.email);
 		preparedStatement.setString(2, user.password);
-		preparedStatement.setDate(3, user.bday);
+		preparedStatement.setDate(3, user.birthday);
 		preparedStatement.setString(4, user.firstName);
 		preparedStatement.setString(5, user.lastName);
-		preparedStatement.setString(6, user.gender);
+		if(user.gender.equals("Male")) {
+			preparedStatement.setString(6, "M");
+		} else if (user.gender.equals("Female")) {
+			preparedStatement.setString(6, "F");
+		} else {
+			preparedStatement.setString(6, "O");
+		}
 		
         boolean userRegistered = preparedStatement.executeUpdate() > 0;
         preparedStatement.close();

@@ -1,10 +1,12 @@
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.PrintWriter;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Date;
 import java.util.List;
- 
+import java.util.Properties;
+
 import javax.servlet.RequestDispatcher;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
@@ -46,23 +48,11 @@ public class ControlServlet extends HttpServlet {
         System.out.println(action);
         try {
             switch (action) {
-            case "/new":
-                showNewForm(request, response);
-                break;
-            case "/insert":
-            	insertPeople(request, response);
-                break;
-            case "/delete":
-            	deletePeople(request, response);
-                break;
-            case "/edit":
-                showEditForm(request, response);
-                break;
-            case "/update":
-            	updatePeople(request, response);
-                break;
-            case "/test":
-            	intializeTenUsers(request, response);
+            case "/showListUsers":
+            	listUsers(request, response);
+            	break;
+            case "/initDB":
+            	initializeDB(request, response);
             	break;
             case "/home":
             	showLoginForm(request, response);
@@ -77,7 +67,7 @@ public class ControlServlet extends HttpServlet {
             	registerUser(request, response);
             	break;
             default:          	
-            	listPeople(request, response);           	
+            	listUsers(request, response);           	
                 break;
             }
         } catch (SQLException | ParseException ex) {
@@ -85,74 +75,21 @@ public class ControlServlet extends HttpServlet {
         }
     }
     
-    private void listPeople(HttpServletRequest request, HttpServletResponse response)
+    private void listUsers(HttpServletRequest request, HttpServletResponse response)
             throws SQLException, IOException, ServletException {
-        List<People> listPeople = peopleDAO.listAllPeople(); //Get list of people from database
-        request.setAttribute("listPeople", listPeople);  //giving it a name / tag for data     
-        RequestDispatcher dispatcher = request.getRequestDispatcher("PeopleList.jsp");       
+        List<User> listUser = peopleDAO.listAllUsers(); //Get list of users from database
+        request.setAttribute("listUser", listUser);  //giving it a name / tag for data     
+        RequestDispatcher dispatcher = request.getRequestDispatcher("UserList.jsp");       
         dispatcher.forward(request, response);
-    }
- 
-    // to insert a people
-    private void showNewForm(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
-        RequestDispatcher dispatcher = request.getRequestDispatcher("InsertPeopleForm.jsp");
-        dispatcher.forward(request, response);
-    }
- 
-    // to present an update form to update an  existing Student
-    private void showEditForm(HttpServletRequest request, HttpServletResponse response)
-            throws SQLException, ServletException, IOException {
-        int id = Integer.parseInt(request.getParameter("id"));
-        People existingPeople = peopleDAO.getPeople(id);
-        RequestDispatcher dispatcher = request.getRequestDispatcher("EditPeopleForm.jsp");
-        request.setAttribute("people", existingPeople);
-        dispatcher.forward(request, response); // The forward() method works at server side, and It sends the same request and response objects to another servlet.
- 
-    }
- 
-    // after the data of a people are inserted, this method will be called to insert the new people into the DB
-    // 
-    private void insertPeople(HttpServletRequest request, HttpServletResponse response)
-            throws SQLException, IOException {
-        String name = request.getParameter("name");
-        String address = request.getParameter("address");
-        String status = request.getParameter("status");
-        People newPeople = new People(name, address, status);
-        peopleDAO.insert(newPeople);
-        response.sendRedirect("list");  // The sendRedirect() method works at client side and sends a new request
-    }
- 
-    private void updatePeople(HttpServletRequest request, HttpServletResponse response)
-            throws SQLException, IOException {
-        int id = Integer.parseInt(request.getParameter("id"));
-        
-        System.out.println(id);
-        String name = request.getParameter("name");
-        String address = request.getParameter("address");
-        String status = request.getParameter("status");
-        
-        System.out.println(name);
-        
-        People people = new People(id,name, address, status);
-        peopleDAO.update(people);
-        response.sendRedirect("list");
-    }
- 
-    private void deletePeople(HttpServletRequest request, HttpServletResponse response)
-            throws SQLException, IOException {
-        int id = Integer.parseInt(request.getParameter("id"));
-        //People people = new People(id);
-        peopleDAO.delete(id);
-        response.sendRedirect("list");  
     }
     
-    private void intializeTenUsers(HttpServletRequest request, HttpServletResponse response)
+    
+    private void initializeDB(HttpServletRequest request, HttpServletResponse response)
     		throws SQLException, IOException {
-    	System.out.println("Got to intializeTenUsers() in ControlServlet");
-    	peopleDAO.intializeTenUsers();
+    	System.out.println("Got to initializeDB() in ControlServlet");
+    	peopleDAO.initializeDatabase();
     	System.out.println("Sending Redirect Link");
-    	response.sendRedirect("default"); //this just sends a redirect to /default which because
+    	response.sendRedirect("showListUsers"); //this just sends a redirect to /default which because
     	//ControlServlet in web.xml file is mapped to a general url /, it gets recieves the request
     	//Essentially a redirect back to itself
     	System.out.println("End intializeTenUsers()");
@@ -163,9 +100,23 @@ public class ControlServlet extends HttpServlet {
     	String email = request.getParameter("email");
     	String password = request.getParameter("password");
     	System.out.println("Starting login authentication");
-    	if(peopleDAO.loginAuthentication(email, password)) {
+    	
+    	//Get root user from Txt file
+    	Properties props = new Properties();
+    	InputStream is = ControlServlet.class.getResourceAsStream("root.properties");
+    	props.load(is);
+    	String rootUsername = props.getProperty("username");
+    	String rootPassword = props.getProperty("password");
+    	
+    	if(email.equals(rootUsername) && password.equals(rootPassword)) {
+    		RequestDispatcher dispatcher = request.getRequestDispatcher("InitDB.jsp");
+    		dispatcher.forward(request, response);
+    	}
+    	else if(peopleDAO.loginAuthentication(email, password)) {
     		//redirect to main page
-    		response.sendRedirect("main");
+    		//response.sendRedirect("main");
+    		//redirect to listOfUsers
+    		response.sendRedirect("showListUsers");
     	}
     	else {
     		//redirect to login page
@@ -180,13 +131,13 @@ public class ControlServlet extends HttpServlet {
     	String email = request.getParameter("email");
         String password = request.getParameter("password");
         
-        Date bday = Date.valueOf(request.getParameter("bday"));
+        Date birthday = Date.valueOf(request.getParameter("birthday"));
         
         String firstName = request.getParameter("firstName");
         String lastName = request.getParameter("lastName");
         String gender = request.getParameter("gender");
         
-        User newUser = new User(email, password, bday, firstName, lastName, gender);
+        User newUser = new User(email, password, birthday, firstName, lastName, gender);
         peopleDAO.registerUser(newUser);
         RequestDispatcher dispatcher = request.getRequestDispatcher("LoginForm.jsp");
         dispatcher.forward(request, response);

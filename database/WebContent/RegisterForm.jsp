@@ -19,8 +19,10 @@
 	<h1>Account Registration</h1>
 	<h2>
 		<a href="home">Login</a>
+		<!--
 	    	&nbsp;&nbsp;&nbsp;
-	    <a href="list">List All People</a>
+	    <a href="list">List Users</a>
+	    -->
 	             
 	</h2>
 	<!-- Create Login Form with action "login" -->
@@ -32,7 +34,11 @@
 			<li><label for="email">Email: </label> <input type ="text" name="email" id="email" required placeholder="Enter your email">
 			<li><label for="password">Password: </label> <input type="password" name="password" id="password" required placeholder="Enter your password">
 	<!-- 	<li><label for="password-confirmation">Confirm Password: </label> <input type="password" name="password-confirm" id="password-confirm" required> -->
-			<li><label for="bday">Birthday: </label> <input type="date" name="bday" id="bday" required placeholder="YYYY-MM-DD">
+			<li><label for="password-confirmation">Confirm Password: </label> <input type="password" name="password-confirm" id="password-confirm" 
+			 onchange="check()" required placeholder="Re-enter your password">
+			<span id='message'></span>
+			
+			<li><label for="birthday">Birthday: </label> <input type="date" name="birthday" id="birthday" required placeholder="YYYY-MM-DD">
 			<li><label for="firstName">First Name: </label> <input type="text" name="firstName" id="firstName" required placeholder="John">
 			<li><label for="lastName">Last Name: </label> <input type="text" name="lastName" id="lastName" required placeholder="Smith">
 			<li><label for="gender">Gender: </label>
@@ -42,11 +48,25 @@
 		      	<option>Other</option>
 		    </select>
 		</ul>
+		<script type="text/javascript">
+			function check() {
+			    if(document.getElementById('password').value ===
+			            document.getElementById('password-confirm').value) {
+			        document.getElementById('message').innerHTML = "match";
+			        document.getElementById('submits').disabled = false;
+			    } else {
+			        document.getElementById('message').innerHTML = "no match";
+			    	document.getElementById('submits').disabled = true;
+			    }
+			}
+		</script>
+
+		
 		<br>
 		</fieldset>
 	<!-- Create Submit and Reset Buttons -->	
 	<p>
-		<input type="submit" value="Register">
+		<input type="submit" id="submits" value="Register">
 		<input type="reset" value="Start Over">
 	</p>
 	</form>

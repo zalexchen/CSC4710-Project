@@ -28,7 +28,7 @@ if(request.getParameter("listPeople") == null) { // we want to make sure that we
             &nbsp;&nbsp;&nbsp;
             <a href="list">List All People</a>
              &nbsp;&nbsp;&nbsp;
-            <a href="test">Testing Stuff</a>
+            <a href="showListUsers">Testing Stuff</a>
         </h2>
     </center>
     <div align="center">

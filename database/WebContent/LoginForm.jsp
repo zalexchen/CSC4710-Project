@@ -19,9 +19,10 @@
 	<h1>Login</h1>
 	<h2>
 		<a href="newUser">Register</a>
+		<!-- 
 	    	&nbsp;&nbsp;&nbsp;
-	    <a href="list">List All People</a>
-	             
+	    <a href="list">List Users</a>
+	    -->
 	</h2>
 	<!-- Create Login Form with action "login" -->
 	<form action="login" method="post">
