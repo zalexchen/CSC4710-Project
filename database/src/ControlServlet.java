@@ -29,10 +29,10 @@ import java.sql.PreparedStatement;
  */
 public class ControlServlet extends HttpServlet {
     private static final long serialVersionUID = 1L;
-    private PeopleDAO peopleDAO;
+    private UserDAO UserDAO;
  
     public void init() {
-        peopleDAO = new PeopleDAO(); 
+        UserDAO = new UserDAO(); 
     }
     
     //doPost == doGet
@@ -77,7 +77,7 @@ public class ControlServlet extends HttpServlet {
     
     private void listUsers(HttpServletRequest request, HttpServletResponse response)
             throws SQLException, IOException, ServletException {
-        List<User> listUser = peopleDAO.listAllUsers(); //Get list of users from database
+        List<User> listUser = UserDAO.listAllUsers(); //Get list of users from database
         request.setAttribute("listUser", listUser);  //giving it a name / tag for data     
         RequestDispatcher dispatcher = request.getRequestDispatcher("UserList.jsp");       
         dispatcher.forward(request, response);
@@ -87,7 +87,7 @@ public class ControlServlet extends HttpServlet {
     private void initializeDB(HttpServletRequest request, HttpServletResponse response)
     		throws SQLException, IOException {
     	System.out.println("Got to initializeDB() in ControlServlet");
-    	peopleDAO.initializeDatabase();
+    	UserDAO.initializeDatabase();
     	System.out.println("Sending Redirect Link");
     	response.sendRedirect("showListUsers"); //this just sends a redirect to /default which because
     	//ControlServlet in web.xml file is mapped to a general url /, it gets recieves the request
@@ -112,7 +112,7 @@ public class ControlServlet extends HttpServlet {
     		RequestDispatcher dispatcher = request.getRequestDispatcher("InitDB.jsp");
     		dispatcher.forward(request, response);
     	}
-    	else if(peopleDAO.loginAuthentication(email, password)) {
+    	else if(UserDAO.loginAuthentication(email, password)) {
     		//redirect to main page
     		//response.sendRedirect("main");
     		//redirect to listOfUsers
@@ -138,9 +138,17 @@ public class ControlServlet extends HttpServlet {
         String gender = request.getParameter("gender");
         
         User newUser = new User(email, password, birthday, firstName, lastName, gender);
-        peopleDAO.registerUser(newUser);
-        RequestDispatcher dispatcher = request.getRequestDispatcher("LoginForm.jsp");
-        dispatcher.forward(request, response);
+        boolean success = UserDAO.registerUser(newUser);
+        if (success) {
+        	RequestDispatcher dispatcher = request.getRequestDispatcher("LoginForm.jsp");
+            dispatcher.forward(request, response);
+        }
+        else {
+        	//Display an error message for the user : Account Already Exists
+        	request.setAttribute("failed", true);
+        	RequestDispatcher dispatcher = request.getRequestDispatcher("RegisterForm.jsp");
+        	dispatcher.forward(request, response);
+        }
         System.out.println("End registerUser() in ControlServlet");
     }
     

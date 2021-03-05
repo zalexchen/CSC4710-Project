@@ -2,6 +2,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.sql.SQLIntegrityConstraintViolationException;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -23,8 +24,8 @@ import java.util.List;
 /**
  * Servlet implementation class Connect
  */
-@WebServlet("/PeopleDAO")
-public class PeopleDAO {     
+@WebServlet("/UserDAO")
+public class UserDAO {     
 	private static final long serialVersionUID = 1L; //not used
 	private Connection connect = null; //jdbc Connection
 	private Statement statement = null; 
@@ -32,7 +33,7 @@ public class PeopleDAO {
 	private ResultSet resultSet = null;
 	
 	
-	public PeopleDAO() {
+	public UserDAO() {
 
     }
 	       
@@ -276,7 +277,6 @@ public class PeopleDAO {
     
     public void initializeTenUsers() throws SQLException {
     	System.out.println("Initializing Users Start");
-    	
     	//connect_func();
     	String sql1 = "DROP TABLE IF EXISTS Users";
         String sql2 = "CREATE TABLE IF NOT EXISTS Users(" +
@@ -291,10 +291,10 @@ public class PeopleDAO {
                 " PRIMARY KEY ( email ))";
         String sql3 = "INSERT INTO Users(email, password, birthday, firstName, lastName, gender, numFollowers, numFollowing) VALUES"
         		+ " ('test@wayne', 'test1234', CURDATE(), 'Test', 'Guy', 'M', 0, 0),"
-        		+ " ('guy@wayne', 'password', CURDATE(), 'Guy', 'Person', 'F', 0, 0),"
-        		+ "('something@gmail', 'password1234', CURDATE(), 'Something', 'Person', 'F', 0, 0),"
-        		+ "('random@gmail', 'password5678', CURDATE(), 'Random', 'Person', 'M', 0, 0),"
-        		+ "('alex@outlook', 'alex12321', CURDATE(), 'Alex', 'Chen', 'M', 0, 0),"
+        		+ " ('guy@wayne', 'password', '2012-12-12', 'Guy', 'Person', 'F', 0, 0),"
+        		+ "('something@gmail', 'password1234', '2011-11-11', 'Something', 'Person', 'F', 0, 0),"
+        		+ "('random@gmail', 'password5678', '2000-10-10', 'Random', 'Person', 'M', 0, 0),"
+        		+ "('alex@outlook', 'alex12321', '2001-09-14', 'Alex', 'Chen', 'M', 0, 0),"
         		+ "('aliveguy@wayne', 'alive12321', CURDATE(), 'Alive', 'Guy', 'O', 0, 0),"
         		+ "('person@protect', 'password333', CURDATE(), 'Person', 'Protect', 'O', 0, 0),"
         		+ "('bodyguard@protect', 'bodyguard', CURDATE(), 'Body', 'Guard', 'O', 0, 0),"
@@ -309,7 +309,7 @@ public class PeopleDAO {
     }
     
     public boolean loginAuthentication(String email, String password) throws SQLException {
-    	System.out.println("LoginAuthentication() in PeopleDAO");
+    	System.out.println("LoginAuthentication() in UserDAO");
     	//if email and password combination is in database, then return true
     	connect_func();
     	
@@ -333,7 +333,7 @@ public class PeopleDAO {
     }
     
     public boolean registerUser(User user) throws SQLException {
-    	System.out.println("Got to registerUser() in peopleDAO");
+    	System.out.println("Got to registerUser() in UserDAO");
     	connect_func();
 		String sql1 = "INSERT into Users(email, password, birthday, firstName, lastName, gender, numFollowers, numFollowing) values (?, ?, ?, ?, ?, ?, 0, 0)";
 		preparedStatement = (PreparedStatement) connect.prepareStatement(sql1);
@@ -349,10 +349,17 @@ public class PeopleDAO {
 		} else {
 			preparedStatement.setString(6, "O");
 		}
-		
-        boolean userRegistered = preparedStatement.executeUpdate() > 0;
-        preparedStatement.close();
-        System.out.println("End registerUser() in peopleDAO");
-        return userRegistered;
+		try {
+			System.out.println("Setup complete");
+	        boolean userRegistered = preparedStatement.executeUpdate() > 0;
+	        System.out.println("register SQL Executed");
+	        preparedStatement.close();
+	        System.out.println("End registerUser() in UserDAO");
+	        return userRegistered;
+		}
+		catch (SQLIntegrityConstraintViolationException e){
+			System.out.println("Account information already exists");
+			return false;
+		}
     }
 }
