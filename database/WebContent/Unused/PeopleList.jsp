@@ -27,21 +27,28 @@ if(request.getParameter("listPeople") == null) { // we want to make sure that we
             <a href="new">Add New People</a>
             &nbsp;&nbsp;&nbsp;
             <a href="list">List All People</a>
-             
+             &nbsp;&nbsp;&nbsp;
+            <a href="showListUsers">Testing Stuff</a>
         </h2>
     </center>
     <div align="center">
         <table border="1" cellpadding="5">
             <caption><h2>List of People</h2></caption>
+            <!-- <tr> table row tag -->
             <tr>
+            	<!--  <th> table header tag -->
                 <th>ID</th>
                 <th>Name</th>
                 <th>Address</th>
                 <th>Status</th>
                 <th>Actions</th>
             </tr>
+            
+            <!-- Iterate over collection of items -->
+            <!--  ${XXXXX} get attribute from request object -->
             <c:forEach var="people" items="${listPeople}">
                 <tr>
+                	<!-- <td> table cell basically -->
                     <td><c:out value="${people.id}" /></td>
                     <td><c:out value="${people.name}" /></td>
                     <td><c:out value="${people.address}" /></td>
