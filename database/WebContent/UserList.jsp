@@ -33,6 +33,7 @@
                 <th>Gender</th>
                 <th>Followers</th>
                 <th>Following</th>
+                <th>Follow/Unfollow</th>
             </tr>
             
             <!-- Iterate over collection of items -->

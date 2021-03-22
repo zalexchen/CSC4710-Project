@@ -14,6 +14,7 @@ import java.sql.Connection;
 import java.sql.Date;
 import java.sql.DriverManager;
 import java.sql.Statement;
+import java.sql.Timestamp;
 import java.sql.PreparedStatement;
 //import java.sql.Connection;
 //import java.sql.PreparedStatement;
@@ -89,6 +90,130 @@ public class UserDAO {
         return listUsers;
     }
     
+    public User getSingleUser(String email, String password) throws SQLException {
+    	System.out.println("Inside getSingleUser in UserDAO");
+    	connect_func();
+    	String sql1 = "SELECT * FROM Users U " +
+    				"WHERE email = ? AND password = ?";
+    	
+    	preparedStatement = connect.prepareStatement(sql1);
+    	preparedStatement.setString(1, email);
+    	preparedStatement.setString(2, password);
+    	ResultSet resultSet = preparedStatement.executeQuery();
+    	System.out.println("Statement Executed");
+    	resultSet.next();	
+    	
+    	Date birthday = resultSet.getDate("birthday");
+        String firstName = resultSet.getString("firstName");
+        String lastName = resultSet.getString("lastName");
+        String gender = resultSet.getString("gender");
+        int numFollowers = resultSet.getInt("numFollowers");
+        int numFollowing = resultSet.getInt("numFollowing");
+        System.out.println("Returning the single user with email: " + email);
+        return new User(email, password, birthday, firstName, lastName, gender, numFollowers, numFollowing);
+    }
+    
+    public List<User> listSelectedUsers(String text, String parameter) throws SQLException {
+    	System.out.println("Inside listSelectedUsers in UserDAO");
+    	List<User> listUsers = new ArrayList<User>();
+    	String sql1;
+    	connect_func();
+    	
+    	if(parameter.equals("First Name")) {
+    		System.out.println("Selecting by firstName");
+    		sql1 = "SELECT * FROM Users U " +
+    				"WHERE firstName = ? ";
+    		preparedStatement = connect.prepareStatement(sql1);
+        	preparedStatement.setString(1, text);
+    	}
+    	else if(parameter.equals("Last Name")) {
+    		System.out.println("Selecting by lastName");
+    		sql1 = "SELECT * FROM Users U " +
+    				"WHERE lastName = ?";
+    		preparedStatement = connect.prepareStatement(sql1);
+        	preparedStatement.setString(1, text);
+    	}
+    	else {
+    		System.out.println("Selecting by both first and last name");
+    		sql1 = "SELECT * FROM Users U " +
+    				"Where firstName = ? OR lastName = ?";
+    		preparedStatement = connect.prepareStatement(sql1);
+        	preparedStatement.setString(1, text);
+        	preparedStatement.setString(2, text);
+    	}
+    	System.out.println("Statement prepared");
+    	ResultSet resultSet = preparedStatement.executeQuery();
+        System.out.println("Statement executed");
+        while (resultSet.next()) {
+            String email = resultSet.getString("email");
+            String password = resultSet.getString("password");
+            Date birthday = resultSet.getDate("birthday");
+            String firstName = resultSet.getString("firstName");
+            String lastName = resultSet.getString("lastName");
+            String gender = resultSet.getString("gender");
+            int numFollowers = resultSet.getInt("numFollowers");
+            int numFollowing = resultSet.getInt("numFollowing");
+             
+            User newUser = new User(email, password, birthday, firstName, lastName, gender, numFollowers, numFollowing);
+            listUsers.add(newUser);
+            System.out.println("Added a user to listUsers");
+        }        
+        System.out.println("End listSelectedUsers in UserDAO");
+    	return listUsers;
+    }
+    
+    public Image getSingleImage(int imageid) throws SQLException {
+    	System.out.println("Inside getSingleImage in UserDAO");
+    	connect_func();
+    	String sql1 = "SELECT * FROM Images I " +
+    				"WHERE imageid = ?";
+    	
+    	preparedStatement = connect.prepareStatement(sql1);
+    	preparedStatement.setInt(1, imageid);
+    	ResultSet resultSet = preparedStatement.executeQuery();
+    	System.out.println("Statement Executed");
+    	resultSet.next();	
+    	
+    	String url = resultSet.getString("url");
+    	String description = resultSet.getString("description");
+    	String postuser = resultSet.getString("postuser");
+    	Date postdate = resultSet.getDate("postdate");
+    	Timestamp posttime = resultSet.getTimestamp("posttime");
+    	
+        System.out.println("Returning the single user with email: " + postuser);
+        return new Image(imageid, url, description, postuser, postdate, posttime);
+    }
+    
+    public List<Image> listSelectedImages(String email) throws SQLException {
+    	System.out.println("Inside listSelectedImages in UserDAO");
+    	List<Image> listImage = new ArrayList<Image>();
+    	connect_func();
+    	String sql1 = "SELECT * FROM Images " +
+    			"WHERE postuser = ? OR postuser IN " +
+    			"(SELECT followingemail FROM follow " +
+    			"WHERE followeremail = ?)";
+    	preparedStatement = connect.prepareStatement(sql1);
+    	preparedStatement.setString(1, email);
+    	preparedStatement.setString(2, email);
+    	ResultSet resultSet = preparedStatement.executeQuery();
+    	System.out.println("Execute Query");
+    	
+    	while(resultSet.next()) {
+    		int imageid = resultSet.getInt("imageid");
+    		String url = resultSet.getString("url");
+    		String description = resultSet.getString("description");
+    		String postuser = resultSet.getString("postuser");
+    		Date postdate = resultSet.getDate("postdate");
+    		Timestamp posttime = resultSet.getTimestamp("posttime");
+    		Image newImage = new Image(imageid, url, description, postuser, postdate, posttime);
+    		listImage.add(newImage);
+    		System.out.println("Added an image to listImage");
+    	}
+    	System.out.println("End listSelectedImages in UserDAO");
+    	return listImage;
+    	
+    }
+    
     public void initializeDatabase() throws SQLException {
     	System.out.println("initDB Start");
     	connect_func();
@@ -99,6 +224,7 @@ public class UserDAO {
     	initializeComments();
     	initializeTag();
     	initializeFollow();
+    	updateFollowerCount();
     	System.out.println("initDB End");
     }
     
@@ -275,6 +401,37 @@ public class UserDAO {
         System.out.println("Initializing Follow End");
     }
     
+    public void updateFollowerCount() throws SQLException {
+    	System.out.println("Inside updateFollowerCount in UserDAO");
+    	connect_func();
+    	String sql1 = "SELECT followingemail, count(followeremail) FROM follow GROUP BY followingemail";
+    	statement = connect.createStatement();
+    	ResultSet resultSet = statement.executeQuery(sql1);
+    	while(resultSet.next()) {
+    		//result will be email : count(followeremail)
+    		//update follower count for the emails listed
+    		String sql = "UPDATE users set numFollowers = ? WHERE email = ?";
+    		preparedStatement = connect.prepareStatement(sql);
+    		preparedStatement.setInt(1, resultSet.getInt("count(followeremail)"));
+    		preparedStatement.setString(2, resultSet.getString("followingemail"));
+    		preparedStatement.executeUpdate();
+    		preparedStatement.close();
+    	}
+    	
+    	String sql2 = "SELECT followeremail, count(followingemail) FROM follow GROUP BY followeremail";
+    	resultSet = statement.executeQuery(sql2);
+    	while(resultSet.next()) {
+    		//update following count for the emails listed
+    		String sql = "UPDATE users set numFollowing = ? WHERE email = ?";
+    		preparedStatement = connect.prepareStatement(sql);
+    		preparedStatement.setInt(1, resultSet.getInt("count(followingemail)"));
+    		preparedStatement.setString(2, resultSet.getString("followeremail"));
+    		preparedStatement.executeUpdate();
+    		preparedStatement.close();
+    	}
+    	System.out.println("Update Following and Follower count complete");
+    }
+    
     public void initializeTenUsers() throws SQLException {
     	System.out.println("Initializing Users Start");
     	//connect_func();
@@ -362,4 +519,41 @@ public class UserDAO {
 			return false;
 		}
     }
+    public boolean postImage(Image image) throws SQLException {
+    	System.out.println("Inside postImage in UserDAO");
+    	connect_func();         
+		String sql1 = "INSERT INTO images(url, description, postuser, postdate, posttime) values (?, ?, ?, ?, ?)";
+		preparedStatement = (PreparedStatement) connect.prepareStatement(sql1);
+		preparedStatement.setString(1, image.url);
+		preparedStatement.setString(2, image.description);
+		preparedStatement.setString(3, image.postuser);
+		preparedStatement.setDate(4, image.postdate);
+		preparedStatement.setTimestamp(5, image.posttime);
+//		preparedStatement.executeUpdate();
+		
+        boolean rowInserted = preparedStatement.executeUpdate() > 0;
+        System.out.println("Statement Executed");
+        preparedStatement.close();
+//        disconnect();
+        return rowInserted;
+    }
+    
+    public boolean editImage(Image image) throws SQLException {
+    	System.out.println("Inside editImage in UserDAO");
+        String sql1 = "UPDATE images set url= ?, description= ? where imageid = ?";
+        connect_func();
+        System.out.println("Image ID gotten: " + image.imageid);
+        preparedStatement = (PreparedStatement) connect.prepareStatement(sql1);
+        preparedStatement.setString(1, image.url);
+        preparedStatement.setString(2, image.description);
+        preparedStatement.setInt(3, image.imageid);
+         
+        boolean rowUpdated = preparedStatement.executeUpdate() > 0;
+        System.out.println("Statement Executed: " + rowUpdated);
+        preparedStatement.close();
+//        disconnect();
+        return rowUpdated;     
+    }
+    
+
 }
