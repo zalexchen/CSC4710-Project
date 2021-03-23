@@ -4,8 +4,10 @@ import java.io.PrintWriter;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Date;
+import java.util.Hashtable;
 import java.util.List;
 import java.util.Properties;
+import java.util.StringTokenizer;
 
 import javax.servlet.RequestDispatcher;
 import javax.servlet.ServletException;
@@ -63,6 +65,18 @@ public class ControlServlet extends HttpServlet {
             case "/search":
             	listSelectedUsers(request, response);
             	break;
+            case "/follow":
+            	followUser(request, response);
+            	break;
+            case "/unfollow":
+            	unfollowUser(request, response);
+            	break;
+            case "/like":
+            	likeImage(request, response);
+            	break;
+            case "/unlike":
+            	unlikeImage(request, response);
+            	break;
             case "/initDB":
             	initializeDB(request, response);
             	break;
@@ -90,6 +104,9 @@ public class ControlServlet extends HttpServlet {
             case "/editImage":
             	editImage(request,response);
             	break;
+            case "/deleteImage":
+            	deleteImage(request, response);
+            	break;
             case "/logout":
             	logoutUser(request, response);
             	break;
@@ -100,6 +117,38 @@ public class ControlServlet extends HttpServlet {
         } catch (SQLException | ParseException ex) {
             throw new ServletException(ex);
         }
+    }
+    
+    private void followUser(HttpServletRequest request, HttpServletResponse response) 
+    		throws SQLException, IOException, ServletException {
+    	System.out.println("Inside followUser in ControlServlet");
+    	System.out.println("1st: " + request.getParameter("useremail") + " 2nd: " + (String)session.getAttribute("currentUserEmail"));
+    	boolean followed = UserDAO.followUser((String)request.getParameter("useremail"), (String)session.getAttribute("currentUserEmail"));
+    	response.sendRedirect("showFeedPage");
+    }
+    
+    private void unfollowUser(HttpServletRequest request, HttpServletResponse response)
+    		throws SQLException, IOException, ServletException {
+    	System.out.println("Inside unfollowUser in ControlServlet");
+    	System.out.println("1st: " + (String)request.getParameter("useremail") + " 2nd: " + (String)session.getAttribute("currentUserEmail"));
+    	boolean unfollowed = UserDAO.unfollowUser((String)request.getParameter("useremail"), (String)session.getAttribute("currentUserEmail"));
+    	response.sendRedirect("showFeedPage");
+    }
+    
+    private void likeImage(HttpServletRequest request, HttpServletResponse response) 
+    		throws SQLException, IOException, ServletException {
+    	System.out.println("Inside likeImage in ControlServlet");
+    	System.out.println("1st: " + request.getParameter("imageid") + " 2nd: " + (String)session.getAttribute("currentUserEmail"));
+    	boolean followed = UserDAO.likeImage((String)session.getAttribute("currentUserEmail"), Integer.parseInt(request.getParameter("imageid")));
+    	response.sendRedirect("showFeedPage");
+    }
+    
+    private void unlikeImage(HttpServletRequest request, HttpServletResponse response)
+    		throws SQLException, IOException, ServletException {
+    	System.out.println("Inside unlikeImage in ControlServlet");
+    	System.out.println("1st: " + request.getParameter("imageid") + " 2nd: " + (String)session.getAttribute("currentUserEmail"));
+    	boolean followed = UserDAO.unlikeImage((String)session.getAttribute("currentUserEmail"), Integer.parseInt(request.getParameter("imageid")));
+    	response.sendRedirect("showFeedPage");
     }
     
     private void listUsers(HttpServletRequest request, HttpServletResponse response)
@@ -117,6 +166,11 @@ public class ControlServlet extends HttpServlet {
     	String searchParameter = request.getParameter("searchParameter");
     	List<User> listUser = UserDAO.listSelectedUsers(searchText, searchParameter);
     	request.setAttribute("listUser", listUser);
+    	
+    	//we attach the list of currentFollowers to the request as well!
+    	System.out.println("Attaching list of currentFollowers to the request as well");
+    	List<String> listCurrentUserFollowing = UserDAO.listCurrentUserFollowing((String)session.getAttribute("currentUserEmail"));
+    	request.setAttribute("listCurrentUserFollowing", listCurrentUserFollowing);
     	RequestDispatcher dispatcher = request.getRequestDispatcher("UserList.jsp");
     	dispatcher.forward(request, response);
     }
@@ -127,6 +181,11 @@ public class ControlServlet extends HttpServlet {
     	System.out.println((String)session.getAttribute("currentUserEmail"));
     	List<Image> listImage = UserDAO.listSelectedImages((String)session.getAttribute("currentUserEmail")); //Get a list of all images for specific user
     	request.setAttribute("listImage", listImage); //attach the list to the request
+    	
+    	//Attach a list of users who liked that image
+    	List<Integer> listLikes = UserDAO.listCurrentUserLikedImageIds((String)session.getAttribute("currentUserEmail"));
+    	request.setAttribute("listLikes", listLikes);
+    	
     	RequestDispatcher dispatcher = request.getRequestDispatcher("FeedPage.jsp");
     	dispatcher.forward(request, response); //throw it to the FeedPage to be displayed
     }
@@ -229,6 +288,17 @@ public class ControlServlet extends HttpServlet {
     	Date currentDate = Date.valueOf(LocalDate.now()); // Magic?!
     	Timestamp currentTimestamp = Timestamp.valueOf(LocalDateTime.now());
     	
+    	//List of Tags: Parse them and add them to the database
+    	/*
+    	int imageid = Integer.parseInt(request.getParameter("imageid"));
+    	String tags = request.getParameter("tags");
+    	StringTokenizer st = new StringTokenizer(tags, ",");
+    	while(st.hasMoreTokens()) {
+    		//insert a tag one at a time
+    		UserDAO.insertTag(imageid, st.nextToken());
+    	}
+    	*/
+    	
     	Image newImage = new Image(url, description, (String)session.getAttribute("currentUserEmail"), currentDate, currentTimestamp);
     	UserDAO.postImage(newImage);
     	response.sendRedirect("showFeedPage");
@@ -250,6 +320,14 @@ public class ControlServlet extends HttpServlet {
         UserDAO.editImage(editedImage);
         response.sendRedirect("showFeedPage");
     
+    }
+    
+    private void deleteImage(HttpServletRequest request, HttpServletResponse response)
+            throws SQLException, IOException {
+        int imageid = Integer.parseInt(request.getParameter("imageid"));
+        
+        UserDAO.deleteImage(imageid);
+        response.sendRedirect("showFeedPage"); 
     }
     
     private void showLoginForm(HttpServletRequest request, HttpServletResponse response)

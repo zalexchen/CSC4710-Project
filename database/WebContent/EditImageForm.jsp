@@ -39,6 +39,14 @@
                     />
                 </td>
             </tr>
+            <tr>
+                <th>Tags: </th>
+                <td>
+                    <input type="text" name="description" required
+                            value="<c:out value='${image.description}' />"
+                    />
+                </td>
+            </tr>
             <!--
             <tr>
             	<th>Postdate + Posttime: </th>
