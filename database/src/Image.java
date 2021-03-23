@@ -9,9 +9,18 @@ public class Image {
 	protected Date postdate;
 	protected Timestamp posttime;
 	
+	protected int numLikes;
+	
+	public Image(int imageid, String url, String description, String postuser, Date postdate, Timestamp posttime, int numLikes) {
+		this(url, description, postuser, postdate, posttime);
+		this.imageid = imageid;
+		this.numLikes = numLikes;
+	}
+	
 	public Image(int imageid, String url, String description, String postuser, Date postdate, Timestamp posttime) {
 		this(url, description, postuser, postdate, posttime);
 		this.imageid = imageid;
+		this.numLikes = 0;
 	}
 	
 	public Image(String url, String description, String postuser, Date postdate, Timestamp posttime) {
@@ -20,6 +29,7 @@ public class Image {
 		this.postuser = postuser;
 		this.postdate = postdate;
 		this.posttime = posttime;
+		this.numLikes = 0;
 	}
 	
 	public Image(int imageid, String url, String description, String postuser) {
@@ -27,6 +37,7 @@ public class Image {
 		this.url = url;
 		this.description = description;
 		this.postuser = postuser;
+		this.numLikes = 0;
 	}
 	
 	public int getImageid() {
@@ -51,5 +62,9 @@ public class Image {
 	
 	public Timestamp getPosttime() {
 		return posttime;
+	}
+	
+	public int getNumLikes() {
+		return numLikes;
 	}
 }

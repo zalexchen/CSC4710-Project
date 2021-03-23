@@ -20,9 +20,9 @@
                         Add a new image!
                 </h2>
             </caption>
-                <c:if test="${image != null}">
-                    <input type="hidden" image="id" value="<c:out value='${image.imageid}' />" />
-                </c:if>
+                <p>
+                    <input type="hidden" name="imageid" id="imageid" value="<c:out value='${image.imageid}' />" />
+                </p>
             <tr>
                 <th>URL: </th>
                 <td>
@@ -39,6 +39,15 @@
                     />
                 </td>
             </tr>
+            <!--
+            <tr>
+                <th>Tags: </th>
+                <td>
+                    <input type="text" name="tags" required
+                            value="<c:out value='${image.description}' />"
+                    />
+                </td>
+            </tr>  -->
             <tr>
                 <td colspan="2" align="center">
                     <input type="submit" value="Post" />

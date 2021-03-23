@@ -92,7 +92,7 @@
 	<h1>Feed Page</h1>
 	<nav>
 		<div class="topnav">
-			<a class="active" href="feedpage">Home</a>
+			<a class="active" href="showFeedPage">Home</a>
 			<a href="showPostImageForm">Post an Image</a>
 			<a href="logout">Logout</a>
 			<div class="search-container">
@@ -114,24 +114,88 @@
     	<!-- List all posts in chronological order -->
     	<h2>Image Post Listing</h2>
     	<table>
+    		<tr>
+                <th>ImageId</th>
+                <th>Image</th>
+                <th>Description</th>
+                <th>Poster</th>
+                <th>Postdate</th>
+                <th>Posttime</th>
+                <th>Likes</th>
+            </tr>
     		<c:forEach var="image" items="${listImage}">
     			
                 <tr>
                 	<!-- <td> table cell basically -->
-                    <td><c:out value="${image.imageid}"/></td>-->
+                    <td><c:out value="${image.imageid}"/></td>
                     <td><img src="<c:out value="${image.url}" />"></td>
                     <td><c:out value="${image.description}" /></td>
                     <td><c:out value="${image.postuser}" /></td>
                     <td><c:out value="${image.postdate}" /></td>
                     <td><c:out value="${image.posttime}" /></td>
+                    <td><p>Likes:</p><c:out value="${image.numLikes}" /></td>
                     <td><a href="showEditImageForm?imageid=<c:out value='${image.imageid}'/>">EDIT</a></td>
-                    <!--  
+                    <td><a href="deleteImage?imageid=<c:out value='${image.imageid}'/>">DELETE</a></td>
                     <td>
-                        <a href="edit?id=<c:out value='${people.id}' />">Edit</a>
-                        &nbsp;&nbsp;&nbsp;&nbsp;
-                        <a href="delete?id=<c:out value='${people.id}' />">Delete</a>                     
-                    </td>
-                    -->
+                    <c:set var="contains" value="false" />
+					<c:forEach var="imageid" items="${listLikes}">
+					  	<c:if test="${imageid eq image.imageid}">
+					    	<c:set var="contains" value="true" />
+					  	</c:if>
+					</c:forEach>
+					<c:choose>
+					
+					
+						<c:when test="${contains eq true}">
+							<!-- display unlike -->
+							<form action="unlike" method="post">
+								<c:if test="${image != null}">
+									<!--<c:out value='${image.imageid}' />-->
+					            	<input type="hidden" name="imageid" id="imageid" value="<c:out value='${image.imageid}' />" />
+					            </c:if> 
+							    <input type="submit" value="unlike" />
+							</form>
+							<c:set var="buttonid" value="${buttonid = buttonid + 1}"/>
+						</c:when>
+						
+						
+						<c:otherwise>
+							<!-- display like button -->
+							<form action="like" method="post">
+								<c:if test="${image != null}">
+									<!--<c:out value='${image.imageid}' />-->
+					            	<input type="hidden" name="imageid" id="imageid" value="<c:out value='${image.imageid}' />" />
+					            </c:if>
+							    <input type="submit" value="like" />
+							</form>
+							<c:set var="buttonid" value="${buttonid = buttonid + 1}"/>
+						</c:otherwise>
+						
+						
+					</c:choose>
+					</td>
+					
+          			<script type="text/javascript">
+          			
+          			function change(id)
+          			{
+          				 
+          				 var btn = document.getElementById(id);
+          				 
+                         if (btn.value == "Follow") {
+                        	 alert("hello (btn.value == follow)");
+                             btn.value = "unFollow";
+                             btn.innerHTML = "unFollow";
+                             
+                         }
+                         else {
+                        	 alert("hello (btn.value != follow)");
+                             btn.value = "Follow";
+                             btn.innerHTML = "Follow";
+                         }
+          			}
+
+          			</script>
                 </tr>
             </c:forEach>
         </table>
