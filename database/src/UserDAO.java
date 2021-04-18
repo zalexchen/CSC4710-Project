@@ -83,10 +83,8 @@ public class UserDAO {
             User newUser = new User(email, password, birthday, firstName, lastName, gender, numFollowers, numFollowing);
             listUsers.add(newUser);
             System.out.println("Added a user to listUsers");
-        }        
-        resultSet.close();
-        statement.close();         
-        disconnect();
+        }
+        statement.close();
         System.out.println("Returning listUsers");
         return listUsers;
     }
@@ -265,17 +263,17 @@ public class UserDAO {
                 " PRIMARY KEY(imageid), " +
                 " FOREIGN KEY(postuser) references Users(email))";
         
-        String sql3 = "INSERT INTO Images(imageid, url, description, postuser, posttime, numLikes) VALUES"
-        		+ " (1, 'https://picsum.photos/id/1/200/300', '1st Picture', 'test@wayne', CURDATE(), 0),"
-        		+ "(2, 'https://picsum.photos/id/2/200/300', '2nd Picture', 'guy@wayne', CURDATE(), 0),"
-        		+ "(3, 'https://picsum.photos/id/3/200/300', '3rd Picture', 'something@gmail', CURDATE(), 0),"
-        		+ "(4, 'https://picsum.photos/id/4/200/300', '4th Picture', 'test@wayne', CURDATE(), 0),"
-        		+ "(5, 'https://picsum.photos/id/5/200/300', '5th Picture', 'guy@wayne', CURDATE(), 0),"
-        		+ "(6, 'https://picsum.photos/id/6/200/300', '6th Picture', 'something@gmail', CURDATE(), 0),"
-        		+ "(7, 'https://picsum.photos/id/7/200/300', '7th Picture', 'alex@outlook', CURDATE(), 0),"
-        		+ "(8, 'https://picsum.photos/id/8/200/300', '8th Picture', 'person@protect', CURDATE(), 0),"
-        		+ "(9, 'https://picsum.photos/id/9/200/300', '9th Picture', 'programmer@gmail', CURDATE(), 0),"
-        		+ "(10, 'https://picsum.photos/id/10/200/300', '10th Picture', 'random@gmail', CURDATE(), 0)";
+        String sql3 = "INSERT INTO Images(imageid, url, description, postuser, postdate, posttime, numLikes) VALUES"
+        		+ " (1, 'https://picsum.photos/id/1/200/300', '1st Picture', 'test@wayne', STR_TO_DATE('17-04-2001','%d-%m-%Y'), CURDATE(), 0),"
+        		+ "(2, 'https://picsum.photos/id/2/200/300', '2nd Picture', 'guy@wayne', STR_TO_DATE('17-04-2021','%d-%m-%Y'), CURDATE(), 0),"
+        		+ "(3, 'https://picsum.photos/id/3/200/300', '3rd Picture', 'something@gmail', STR_TO_DATE('18-04-2021','%d-%m-%Y'), CURDATE(), 0),"
+        		+ "(4, 'https://picsum.photos/id/4/200/300', '4th Picture', 'test@wayne', STR_TO_DATE('17-04-2001','%d-%m-%Y'), CURDATE(), 0),"
+        		+ "(5, 'https://picsum.photos/id/5/200/300', '5th Picture', 'guy@wayne', STR_TO_DATE('17-04-2021','%d-%m-%Y'), CURDATE(), 0),"
+        		+ "(6, 'https://picsum.photos/id/6/200/300', '6th Picture', 'something@gmail', STR_TO_DATE('17-04-2001','%d-%m-%Y'), CURDATE(), 0),"
+        		+ "(7, 'https://picsum.photos/id/7/200/300', '7th Picture', 'alex@outlook', STR_TO_DATE('18-04-2021','%d-%m-%Y'), CURDATE(), 0),"
+        		+ "(8, 'https://picsum.photos/id/8/200/300', '8th Picture', 'person@protect', STR_TO_DATE('17-04-2001','%d-%m-%Y'), CURDATE(), 0),"
+        		+ "(9, 'https://picsum.photos/id/9/200/300', '9th Picture', 'programmer@gmail', STR_TO_DATE('18-04-2021','%d-%m-%Y'), CURDATE(), 0),"
+        		+ "(10, 'https://picsum.photos/id/10/200/300', '10th Picture', 'random@gmail', STR_TO_DATE('17-04-2001','%d-%m-%Y'), CURDATE(), 0)";
 
         statement = connect.createStatement();
         statement.executeUpdate(sql1);
@@ -544,7 +542,7 @@ public class UserDAO {
 		}
     }
     
-    public boolean postImage(Image image) throws SQLException {
+    public boolean postImage(Image image, List<String> tags) throws SQLException {
     	System.out.println("Inside postImage in UserDAO");
     	connect_func();         
 		String sql1 = "INSERT INTO images(url, description, postuser, postdate, posttime) values (?, ?, ?, ?, ?)";
@@ -555,15 +553,24 @@ public class UserDAO {
 		preparedStatement.setDate(4, image.postdate);
 		preparedStatement.setTimestamp(5, image.posttime);
 //		preparedStatement.executeUpdate();
-		
         boolean rowInserted = preparedStatement.executeUpdate() > 0;
         System.out.println("Statement Executed");
         preparedStatement.close();
+        
+        System.out.println("Now inserting tags for image... (First getting imageid of new image)");
+        for(int i = 0; i < tags.size(); i++) {
+            String sql3 = "SELECT last_insert_id()";
+            statement = connect.createStatement();
+            ResultSet resultSet = statement.executeQuery(sql3);
+            if(resultSet.next()) {
+            	insertTag(resultSet.getInt(1), tags.get(i));
+            }
+        }
 //        disconnect();
         return rowInserted;
     }
     
-    public boolean editImage(Image image) throws SQLException {
+    public boolean editImage(Image image, List<String> tags) throws SQLException {
     	System.out.println("Inside editImage in UserDAO");
         String sql1 = "UPDATE images set url= ?, description= ? where imageid = ?";
         connect_func();
@@ -576,8 +583,36 @@ public class UserDAO {
         boolean rowUpdated = preparedStatement.executeUpdate() > 0;
         System.out.println("Statement Executed: " + rowUpdated);
         preparedStatement.close();
+        
+        System.out.println("Updating tags...");
+        //First Delete then Insert new
+        String sql2 = "DELETE FROM tags WHERE imageid = ?";
+        preparedStatement = connect.prepareStatement(sql2);
+        preparedStatement.setInt(1, image.imageid);
+        preparedStatement.executeUpdate();
+        
+        System.out.println("Now inserting tags for image...");
+        for(int i = 0; i < tags.size(); i++) {
+            insertTag(image.imageid, tags.get(i));
+        }
+        
 //        disconnect();
         return rowUpdated;     
+    }
+    
+    public List<String> getTagsFromSingleImage(int imageid) throws SQLException {
+    	System.out.println("Inside getTagsFromSingleImage");
+    	List<String> listTags = new ArrayList<String>();
+    	connect_func();
+    	String sql1 = "SELECT tag FROM tags WHERE imageid = ?";
+    	preparedStatement = connect.prepareStatement(sql1);
+    	preparedStatement.setInt(1, imageid);
+    	ResultSet resultSet = preparedStatement.executeQuery();
+    	while(resultSet.next()) {
+    		System.out.println("Got tag, adding to list");
+    		listTags.add(resultSet.getString("tag"));
+    	}
+    	return listTags;
     }
     
     public List<String> listCurrentUserFollowing(String currentUserEmail) throws SQLException {
@@ -691,8 +726,14 @@ public class UserDAO {
     	preparedStatement.executeUpdate();
     	System.out.println("Deleted Tags");
     	
-        String sql3 = "DELETE FROM images WHERE imageid = ?";
-        preparedStatement = (PreparedStatement) connect.prepareStatement(sql3);
+    	String sql3 = "DELETE FROM comments WHERE imageid = ?";
+    	preparedStatement = connect.prepareStatement(sql3);
+    	preparedStatement.setInt(1, imageid);
+    	preparedStatement.executeUpdate();
+    	System.out.println("Deleted Comments");
+    	
+        String sql4 = "DELETE FROM images WHERE imageid = ?";
+        preparedStatement = (PreparedStatement) connect.prepareStatement(sql4);
         preparedStatement.setInt(1, imageid);
         boolean rowDeleted = preparedStatement.executeUpdate() > 0;
         System.out.println("Deleted!: " + rowDeleted);
@@ -714,6 +755,186 @@ public class UserDAO {
         preparedStatement.close();
 //        disconnect();
         return rowInserted;
+    }
+    
+    /*
+     * Project Part 3 Start:
+     */
+    
+    public List<Image> coolImages() throws SQLException {
+    	System.out.println("Inside coolImages() in UserDAO");
+    	List<Image> listImage = new ArrayList<Image>();
+    	connect_func();
+    	String sql1 = "SELECT * FROM images WHERE imageid in (SELECT imageid FROM likes GROUP BY imageid HAVING count(email) >= 5)";
+    	statement = connect.createStatement();
+        ResultSet resultSet = statement.executeQuery(sql1);
+    	
+    	while(resultSet.next()) {
+    		int imageid = resultSet.getInt("imageid");
+    		String url = resultSet.getString("url");
+    		String description = resultSet.getString("description");
+    		String postuser = resultSet.getString("postuser");
+    		Date postdate = resultSet.getDate("postdate");
+    		Timestamp posttime = resultSet.getTimestamp("posttime");
+    		int numLikes = resultSet.getInt("numLikes");
+    		Image newImage = new Image(imageid, url, description, postuser, postdate, posttime, numLikes);
+    		listImage.add(newImage);
+    		System.out.println("Added an image to listImage in coolImages()");
+    	}
+    	System.out.println("End coolImages() in UserDAO");
+    	return listImage;
+    }
+    
+    public List<Image> newImages() throws SQLException {
+    	System.out.println("Inside newImages() in UserDAO");
+    	List<Image> listImage = new ArrayList<Image>();
+    	connect_func();
+    	String sql1 = "SELECT * FROM images WHERE postdate = CURDATE()";
+    	statement = connect.createStatement();
+        ResultSet resultSet = statement.executeQuery(sql1);
+    	
+    	while(resultSet.next()) {
+    		int imageid = resultSet.getInt("imageid");
+    		String url = resultSet.getString("url");
+    		String description = resultSet.getString("description");
+    		String postuser = resultSet.getString("postuser");
+    		Date postdate = resultSet.getDate("postdate");
+    		Timestamp posttime = resultSet.getTimestamp("posttime");
+    		int numLikes = resultSet.getInt("numLikes");
+    		Image newImage = new Image(imageid, url, description, postuser, postdate, posttime, numLikes);
+    		listImage.add(newImage);
+    		System.out.println("Added an image to listImage in newImages()");
+    	}
+    	System.out.println("End newImages() in UserDAO");
+    	return listImage;
+    }
+    
+    public List<Image> viralImages() throws SQLException {
+    	System.out.println("Inside viralImages() in UserDAO");
+    	List<Image> listImage = new ArrayList<Image>();
+    	connect_func();
+    	String sql1 = "SELECT * FROM images ORDER BY numLikes DESC LIMIT 3";
+    	statement = connect.createStatement();
+        ResultSet resultSet = statement.executeQuery(sql1);
+    	
+    	while(resultSet.next()) {
+    		int imageid = resultSet.getInt("imageid");
+    		String url = resultSet.getString("url");
+    		String description = resultSet.getString("description");
+    		String postuser = resultSet.getString("postuser");
+    		Date postdate = resultSet.getDate("postdate");
+    		Timestamp posttime = resultSet.getTimestamp("posttime");
+    		int numLikes = resultSet.getInt("numLikes");
+    		Image newImage = new Image(imageid, url, description, postuser, postdate, posttime, numLikes);
+    		listImage.add(newImage);
+    		System.out.println("Added an image to listImage in viralImages()");
+    	}
+    	System.out.println("End viralImages() in UserDAO");
+    	return listImage;
+    }
+    
+    public List<User> topUsers() throws SQLException {
+    	List<User> listUsers = new ArrayList<User>();        
+        String sql = "SELECT * FROM users WHERE email in ("
+        		+ "SELECT postuser FROM images GROUP BY postuser HAVING count(imageid) in ("
+        		+ "SELECT MAX(Total) FROM (SELECT count(*) AS Total FROM images GROUP BY postuser) AS Results"
+        		+ ")"
+        		+ ")";      
+        connect_func();      
+        statement =  (Statement) connect.createStatement();
+        ResultSet resultSet = statement.executeQuery(sql);
+         
+        while (resultSet.next()) {
+            String email = resultSet.getString("email");
+            String password = resultSet.getString("password");
+            Date birthday = resultSet.getDate("birthday");
+            String firstName = resultSet.getString("firstName");
+            String lastName = resultSet.getString("lastName");
+            String gender = resultSet.getString("gender");
+            int numFollowers = resultSet.getInt("numFollowers");
+            int numFollowing = resultSet.getInt("numFollowing");
+             
+            User newUser = new User(email, password, birthday, firstName, lastName, gender, numFollowers, numFollowing);
+            listUsers.add(newUser);
+        }     
+        resultSet.close();
+        statement.close();         
+        disconnect();
+        return listUsers;
+    }
+    
+    public List<User> popularUsers() throws SQLException {
+    	List<User> listUsers = new ArrayList<User>();        
+        String sql = "SELECT * FROM users WHERE email in ("
+        		+ "SELECT followeremail FROM follow GROUP BY followeremail HAVING count(followingemail) >= 5"
+        		+ ")";      
+        connect_func();      
+        statement =  (Statement) connect.createStatement();
+        ResultSet resultSet = statement.executeQuery(sql);
+         
+        while (resultSet.next()) {
+            String email = resultSet.getString("email");
+            String password = resultSet.getString("password");
+            Date birthday = resultSet.getDate("birthday");
+            String firstName = resultSet.getString("firstName");
+            String lastName = resultSet.getString("lastName");
+            String gender = resultSet.getString("gender");
+            int numFollowers = resultSet.getInt("numFollowers");
+            int numFollowing = resultSet.getInt("numFollowing");
+             
+            User newUser = new User(email, password, birthday, firstName, lastName, gender, numFollowers, numFollowing);
+            listUsers.add(newUser);
+        }     
+        resultSet.close();
+        statement.close();         
+        disconnect();
+        return listUsers;
+    }
+    
+    public List<User> commonUsers(String user1, String user2) throws SQLException {
+    	List<User> listUsers = new ArrayList<User>();        
+        String sql = "SELECT * FROM users WHERE email in ("
+        		+ "SELECT DISTINCT followingemail FROM follow WHERE followeremail = ? OR followeremail = ?"
+        		+ ")";      
+        connect_func();      
+        preparedStatement = (PreparedStatement) connect.prepareStatement(sql);
+		preparedStatement.setString(1, user1);
+		preparedStatement.setString(2, user2);
+        ResultSet resultSet = preparedStatement.executeQuery();
+         
+        while (resultSet.next()) {
+            String email = resultSet.getString("email");
+            String password = resultSet.getString("password");
+            Date birthday = resultSet.getDate("birthday");
+            String firstName = resultSet.getString("firstName");
+            String lastName = resultSet.getString("lastName");
+            String gender = resultSet.getString("gender");
+            int numFollowers = resultSet.getInt("numFollowers");
+            int numFollowing = resultSet.getInt("numFollowing");
+             
+            User newUser = new User(email, password, birthday, firstName, lastName, gender, numFollowers, numFollowing);
+            listUsers.add(newUser);
+        }     
+        resultSet.close();
+        statement.close();         
+        disconnect();
+        return listUsers;
+    }
+    
+    public List<String> topTags() throws SQLException {
+    	List<String> listTags = new ArrayList<String>();        
+        String sql = "SELECT tag FROM tags GROUP BY tag HAVING count(imageid) >= 3";      
+        connect_func();      
+        statement =  (Statement) connect.createStatement();
+        ResultSet resultSet = statement.executeQuery(sql);
+         
+        while (resultSet.next()) {
+            listTags.add(resultSet.getString("tag"));
+        }     
+        resultSet.close();
+        statement.close();         
+        disconnect();
+        return listTags;
     }
 }
 

@@ -1,7 +1,7 @@
 import java.sql.Date;
 import java.sql.Timestamp;
 
-public class Image {
+public class Image implements Comparable<Image> {
 	protected int imageid;
 	protected String url;
 	protected String description;
@@ -66,5 +66,26 @@ public class Image {
 	
 	public int getNumLikes() {
 		return numLikes;
+	}
+	
+	@Override
+	public boolean equals(Object o) {
+		if (o == this) {
+			return true;
+		}
+		int result = this.posttime.compareTo(((Image)o).posttime);
+		return result == 0;
+	}
+	
+	@Override
+	public int compareTo(Image I) {
+	    if (this.posttime == null || I.posttime == null) {
+	      return 0;
+	    }
+	    //ensure no ambiguity in order of treemap
+	    if(this.posttime.compareTo(I.posttime) == 0) {
+	    	return -1;
+	    }
+	    return this.posttime.compareTo(I.posttime);
 	}
 }

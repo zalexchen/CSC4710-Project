@@ -124,23 +124,24 @@
                 <th>Likes</th>
                 <th>Tags</th>
             </tr>
-    		<c:forEach var="pair" items="${treemapImageAndTag}">
+    		<c:forEach var="image" items="${listImage}">
+    			
                 <tr>
                 	<!-- <td> table cell basically -->
-                    <td><c:out value="${pair.key.imageid}"/></td>
-                    <td><img src="<c:out value="${pair.key.url}" />"></td>
-                    <td><c:out value="${pair.key.description}" /></td>
-                    <td><c:out value="${pair.key.postuser}" /></td>
+                    <td><c:out value="${image.imageid}"/></td>
+                    <td><img src="<c:out value="${image.url}" />"></td>
+                    <td><c:out value="${image.description}" /></td>
+                    <td><c:out value="${image.postuser}" /></td>
                     <!--<td><c:out value="${image.postdate}" /></td>-->
-                    <td><c:out value="${pair.key.posttime}" /></td>
-                    <td><p>Likes:</p><c:out value="${pair.key.numLikes}" /></td>
-                    <td><c:out value='${pair.value}'/></td>
-                    <td><a href="showEditImageForm?imageid=<c:out value='${pair.key.imageid}'/>">EDIT</a></td>
-                    <td><a href="deleteImage?imageid=<c:out value='${pair.key.imageid}'/>">DELETE</a></td>
+                    <td><c:out value="${image.posttime}" /></td>
+                    <td><p>Likes:</p><c:out value="${image.numLikes}" /></td>
+                    <td><c:out value='${existingTagsString}'/></td>
+                    <td><a href="showEditImageForm?imageid=<c:out value='${image.imageid}'/>">EDIT</a></td>
+                    <td><a href="deleteImage?imageid=<c:out value='${image.imageid}'/>">DELETE</a></td>
                     <td>
                     <c:set var="contains" value="false" />
 					<c:forEach var="imageid" items="${listLikes}">
-					  	<c:if test="${imageid eq pair.key.imageid}">
+					  	<c:if test="${imageid eq image.imageid}">
 					    	<c:set var="contains" value="true" />
 					  	</c:if>
 					</c:forEach>
@@ -150,9 +151,9 @@
 						<c:when test="${contains eq true}">
 							<!-- display unlike -->
 							<form action="unlike" method="post">
-								<c:if test="${pair.key != null}">
-									<!--<c:out value='${pair.key.imageid}' />-->
-					            	<input type="hidden" name="imageid" id="imageid" value="<c:out value='${pair.key.imageid}' />" />
+								<c:if test="${image != null}">
+									<!--<c:out value='${image.imageid}' />-->
+					            	<input type="hidden" name="imageid" id="imageid" value="<c:out value='${image.imageid}' />" />
 					            </c:if> 
 							    <input type="submit" value="unlike" />
 							</form>
@@ -163,9 +164,9 @@
 						<c:otherwise>
 							<!-- display like button -->
 							<form action="like" method="post">
-								<c:if test="${pair.key != null}">
-									<!--<c:out value='${pair.key.imageid}' />-->
-					            	<input type="hidden" name="imageid" id="imageid" value="<c:out value='${pair.key.imageid}' />" />
+								<c:if test="${image != null}">
+									<!--<c:out value='${image.imageid}' />-->
+					            	<input type="hidden" name="imageid" id="imageid" value="<c:out value='${image.imageid}' />" />
 					            </c:if>
 							    <input type="submit" value="like" />
 							</form>

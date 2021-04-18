@@ -39,7 +39,6 @@
                     />
                 </td>
             </tr>
-            <!--
             <tr>
                 <th>Tags: </th>
                 <td>
@@ -47,7 +46,7 @@
                             value="<c:out value='${image.description}' />"
                     />
                 </td>
-            </tr>  -->
+            </tr>
             <tr>
                 <td colspan="2" align="center">
                     <input type="submit" value="Post" />

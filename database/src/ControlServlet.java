@@ -4,10 +4,15 @@ import java.io.PrintWriter;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Date;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.StringTokenizer;
+import java.util.TreeMap;
 
 import javax.servlet.RequestDispatcher;
 import javax.servlet.ServletException;
@@ -110,8 +115,39 @@ public class ControlServlet extends HttpServlet {
             case "/logout":
             	logoutUser(request, response);
             	break;
+            // Project Part 3:
+            case "/coolImages":
+            	coolImages(request, response);
+            	break;
+            case "/newImages":
+            	newImages(request, response);
+            	break;
+            case "/viralImages":
+            	viralImages(request, response);
+            	break;
+            case "/topUsers":
+            	topUsers(request, response);
+            	break;
+            case "/popularUsers":
+            	popularUsers(request, response);
+            	break;
+            case "/commonUsers":
+            	commonUsers(request, response);
+            	break;
+            case "/topTags":
+            	topTags(request, response);
+            	break;
+            case "/positiveUsers":
+            	positiveUsers(request, response);
+            	break;
+            case "/poorImages":
+            	poorImages(request, response);
+            	break;
+            case "/inactiveUsers":
+            	inactiveUsers(request, response);
+            	break;
             default:          	
-            	listUsers(request, response);           	
+            	//listImages(request, response);           	
                 break;
             }
         } catch (SQLException | ParseException ex) {
@@ -180,7 +216,27 @@ public class ControlServlet extends HttpServlet {
     	System.out.println("Inside listImages in ControlServlet");
     	System.out.println((String)session.getAttribute("currentUserEmail"));
     	List<Image> listImage = UserDAO.listSelectedImages((String)session.getAttribute("currentUserEmail")); //Get a list of all images for specific user
-    	request.setAttribute("listImage", listImage); //attach the list to the request
+    	//Create Treemap pairing the image data with the tag data
+    	TreeMap<Image, String> imageAndTag = new TreeMap<Image, String>(Collections.reverseOrder());
+    	for(int i = 0; i < listImage.size(); i++) {
+    		List<String> existingTagsList = UserDAO.getTagsFromSingleImage(listImage.get(i).imageid);
+            StringBuilder existingTags = new StringBuilder();
+            for(String tag : existingTagsList) {
+                existingTags.append(tag);
+                existingTags.append(",");
+            }
+            //Remove trailing comma
+            String existingTagsString = existingTags.length() > 0 ? existingTags.substring(0, existingTags.length() - 1) : "";
+            imageAndTag.put(listImage.get(i), existingTagsString);
+    	}
+    	//Sort the hashmap with stream
+    	/*System.out.println("Sorting treemap by key...");
+    	imageAndTag.entrySet()
+    	  .stream()
+    	  .sorted(Map.Entry.<Image, String>comparingByKey().reversed());*/
+    	
+    	request.setAttribute("treemapImageAndTag", imageAndTag);
+    	//request.setAttribute("listImage", listImage); //attach the list to the request
     	
     	//Attach a list of users who liked that image
     	List<Integer> listLikes = UserDAO.listCurrentUserLikedImageIds((String)session.getAttribute("currentUserEmail"));
@@ -217,6 +273,8 @@ public class ControlServlet extends HttpServlet {
     	
     	if(email.equals(rootUsername) && password.equals(rootPassword)) {
     		RequestDispatcher dispatcher = request.getRequestDispatcher("InitDB.jsp");
+    		List<User> listUser = UserDAO.listAllUsers();
+            request.setAttribute("listUser", listUser);
     		dispatcher.forward(request, response);
     	}
     	else if(UserDAO.loginAuthentication(email, password)) {
@@ -288,19 +346,16 @@ public class ControlServlet extends HttpServlet {
     	Date currentDate = Date.valueOf(LocalDate.now()); // Magic?!
     	Timestamp currentTimestamp = Timestamp.valueOf(LocalDateTime.now());
     	
-    	//List of Tags: Parse them and add them to the database
-    	/*
-    	int imageid = Integer.parseInt(request.getParameter("imageid"));
     	String tags = request.getParameter("tags");
     	StringTokenizer st = new StringTokenizer(tags, ",");
+    	ArrayList<String> tagsList = new ArrayList<String>();
     	while(st.hasMoreTokens()) {
     		//insert a tag one at a time
-    		UserDAO.insertTag(imageid, st.nextToken());
+    		tagsList.add(st.nextToken());
     	}
-    	*/
     	
     	Image newImage = new Image(url, description, (String)session.getAttribute("currentUserEmail"), currentDate, currentTimestamp);
-    	UserDAO.postImage(newImage);
+    	UserDAO.postImage(newImage, tagsList);
     	response.sendRedirect("showFeedPage");
     }
     
@@ -316,8 +371,18 @@ public class ControlServlet extends HttpServlet {
         Date postdate = Date.valueOf(request.getParameter("postdate"));
         Timestamp posttime = Timestamp.valueOf(request.getParameter("posttime"));
         */
+        
+        String tags = request.getParameter("tags");
+    	StringTokenizer st = new StringTokenizer(tags, ",");
+    	ArrayList<String> tagsList = new ArrayList<String>();
+    	while(st.hasMoreTokens()) {
+    		//insert a tag one at a time
+    		tagsList.add(st.nextToken());
+    	}
+    	
+        
         Image editedImage = new Image(imageid, url, description, (String)session.getAttribute("currentUserEmail"));
-        UserDAO.editImage(editedImage);
+        UserDAO.editImage(editedImage, tagsList);
         response.sendRedirect("showFeedPage");
     
     }
@@ -353,8 +418,170 @@ public class ControlServlet extends HttpServlet {
     	System.out.println("Inside showEditImageForm");
     	int imageid = Integer.parseInt(request.getParameter("imageid"));
         Image existingImage = UserDAO.getSingleImage(imageid);
+        List<String> existingTagsList = UserDAO.getTagsFromSingleImage(imageid);
+        StringBuilder existingTags = new StringBuilder();
+        for(String tag : existingTagsList) {
+            existingTags.append(tag);
+            existingTags.append(",");
+        }
+        //Remove trailing comma
+        String existingTagsString = existingTags.length() > 0 ? existingTags.substring(0, existingTags.length() - 1) : "";
+        System.out.println("existingTagsString: " + existingTagsString);
         RequestDispatcher dispatcher = request.getRequestDispatcher("EditImageForm.jsp");
         request.setAttribute("image", existingImage);
+        request.setAttribute("existingTagsString", existingTagsString);
         dispatcher.forward(request, response); // The forward() method works at server side, and It sends the same request and response objects to another servlet.
+    }
+    /*
+     * Project Part 3 Start
+     */
+    private void coolImages(HttpServletRequest request, HttpServletResponse response)
+    		throws ServletException, IOException, SQLException {
+    	System.out.println("Inside coolImages in ControlServlet");
+    	List<Image> listImage = UserDAO.coolImages();
+    	//Create Treemap pairing the image data with the tag data
+    	TreeMap<Image, String> imageAndTag = new TreeMap<Image, String>(Collections.reverseOrder());
+    	for(int i = 0; i < listImage.size(); i++) {
+    		List<String> existingTagsList = UserDAO.getTagsFromSingleImage(listImage.get(i).imageid);
+            StringBuilder existingTags = new StringBuilder();
+            for(String tag : existingTagsList) {
+                existingTags.append(tag);
+                existingTags.append(",");
+            }
+            // Remove trailing comma
+            String existingTagsString = existingTags.length() > 0 ? existingTags.substring(0, existingTags.length() - 1) : "";
+            imageAndTag.put(listImage.get(i), existingTagsString);
+    	}
+    	
+    	request.setAttribute("treemapImageAndTag", imageAndTag);
+    	request.setAttribute("headerTag", "Images");
+    	
+    	RequestDispatcher dispatcher = request.getRequestDispatcher("RootUserPage.jsp");
+    	dispatcher.forward(request, response);
+    }
+    
+    private void newImages(HttpServletRequest request, HttpServletResponse response)
+    		throws ServletException, IOException, SQLException {
+    	System.out.println("Inside newImages in ControlServlet");
+    	List<Image> listImage = UserDAO.newImages();
+    	//Create Treemap pairing the image data with the tag data
+    	TreeMap<Image, String> imageAndTag = new TreeMap<Image, String>(Collections.reverseOrder());
+    	for(int i = 0; i < listImage.size(); i++) {
+    		List<String> existingTagsList = UserDAO.getTagsFromSingleImage(listImage.get(i).imageid);
+            StringBuilder existingTags = new StringBuilder();
+            for(String tag : existingTagsList) {
+                existingTags.append(tag);
+                existingTags.append(",");
+            }
+            // Remove trailing comma
+            String existingTagsString = existingTags.length() > 0 ? existingTags.substring(0, existingTags.length() - 1) : "";
+            imageAndTag.put(listImage.get(i), existingTagsString);
+    	}
+    	
+    	request.setAttribute("treemapImageAndTag", imageAndTag);
+    	request.setAttribute("headerTag", "Images");
+    	
+    	RequestDispatcher dispatcher = request.getRequestDispatcher("RootUserPage.jsp");
+    	dispatcher.forward(request, response);
+    }
+    
+    private void viralImages(HttpServletRequest request, HttpServletResponse response)
+    		throws ServletException, IOException, SQLException {
+    	System.out.println("Inside viralImages in ControlServlet");
+    	List<Image> listImage = UserDAO.viralImages();
+    	//Create Treemap pairing the image data with the tag data
+    	TreeMap<Image, String> imageAndTag = new TreeMap<Image, String>(Collections.reverseOrder());
+    	for(int i = 0; i < listImage.size(); i++) {
+    		List<String> existingTagsList = UserDAO.getTagsFromSingleImage(listImage.get(i).imageid);
+            StringBuilder existingTags = new StringBuilder();
+            for(String tag : existingTagsList) {
+                existingTags.append(tag);
+                existingTags.append(",");
+            }
+            // Remove trailing comma
+            String existingTagsString = existingTags.length() > 0 ? existingTags.substring(0, existingTags.length() - 1) : "";
+            imageAndTag.put(listImage.get(i), existingTagsString);
+    	}
+    	
+    	request.setAttribute("treemapImageAndTag", imageAndTag);
+    	request.setAttribute("headerTag", "Images");
+    	
+    	RequestDispatcher dispatcher = request.getRequestDispatcher("RootUserPage.jsp");
+    	dispatcher.forward(request, response);
+    }
+    
+    private void topUsers(HttpServletRequest request, HttpServletResponse response)
+    		throws ServletException, IOException, SQLException {
+    	System.out.println("Inside topUsers in ControlServlet");
+    	request.setAttribute("headerTag", "Users");
+    	
+    	List<User> listUser = UserDAO.topUsers();
+        request.setAttribute("listUser", listUser);
+    	
+    	RequestDispatcher dispatcher = request.getRequestDispatcher("RootUserPage.jsp");
+    	dispatcher.forward(request, response);
+    }
+    
+    private void popularUsers(HttpServletRequest request, HttpServletResponse response)
+    		throws ServletException, IOException, SQLException {
+    	System.out.println("Inside popularUsers in ControlServlet");
+    	request.setAttribute("headerTag", "Users");
+    	
+    	List<User> listUser = UserDAO.popularUsers();
+        request.setAttribute("listUser", listUser);
+    	
+    	RequestDispatcher dispatcher = request.getRequestDispatcher("RootUserPage.jsp");
+    	dispatcher.forward(request, response);
+    }
+    
+    private void commonUsers(HttpServletRequest request, HttpServletResponse response)
+    		throws ServletException, IOException, SQLException {
+    	System.out.println("Inside commonUsers in ControlServlet");
+    	request.setAttribute("headerTag", "Users");
+    	
+    	List<User> listUser = UserDAO.commonUsers(request.getParameter("user1"), request.getParameter("user2"));
+        request.setAttribute("listUser", listUser);
+    	
+    	RequestDispatcher dispatcher = request.getRequestDispatcher("RootUserPage.jsp");
+    	dispatcher.forward(request, response);
+    }
+    
+    private void topTags(HttpServletRequest request, HttpServletResponse response)
+    		throws ServletException, IOException, SQLException {
+    	System.out.println("Inside topTags in ControlServlet");
+    	request.setAttribute("headerTag", "Tags");
+    	
+    	List<String> listTags = UserDAO.topTags();
+    	request.setAttribute("listTags", listTags);
+    	
+    	RequestDispatcher dispatcher = request.getRequestDispatcher("RootUserPage.jsp");
+    	dispatcher.forward(request, response);
+    }
+    
+    private void positiveUsers(HttpServletRequest request, HttpServletResponse response)
+    		throws ServletException, IOException, SQLException {
+    	System.out.println("Inside positiveUsers in ControlServlet");
+    	request.setAttribute("headerTag", "Users");
+    	
+    	RequestDispatcher dispatcher = request.getRequestDispatcher("RootUserPage.jsp");
+    	dispatcher.forward(request, response);
+    }
+    
+    private void poorImages(HttpServletRequest request, HttpServletResponse response)
+    		throws ServletException, IOException, SQLException {
+    	System.out.println("Inside poorUsers in ControlServlet");
+    	request.setAttribute("headerTag", "Images");
+    	
+    	RequestDispatcher dispatcher = request.getRequestDispatcher("RootUserPage.jsp");
+    	dispatcher.forward(request, response);
+    }
+    
+    private void inactiveUsers(HttpServletRequest request, HttpServletResponse response)
+    		throws ServletException, IOException, SQLException {
+    	System.out.println("Inside inactiveUsers in ControlServlet");
+    	request.setAttribute("headerTag", "Users");
+    	
+    	RequestDispatcher dispatcher = request.getRequestDispatcher("RootUserPage.jsp");
+    	dispatcher.forward(request, response);
     }
 }

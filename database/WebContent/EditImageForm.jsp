@@ -42,8 +42,8 @@
             <tr>
                 <th>Tags: </th>
                 <td>
-                    <input type="text" name="description" required
-                            value="<c:out value='${image.description}' />"
+                    <input type="text" name="tags" required
+                            value="<c:out value='${existingTagsString}' />"
                     />
                 </td>
             </tr>

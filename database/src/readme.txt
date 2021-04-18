@@ -1,4 +1,4 @@
-Instructions to View and Test Project Part 1:
+nInstructions to View and Test Project Part 1:
 
 1. Open Eclipse
 2. Import the .war file as a Web Project using eclipse
@@ -7,6 +7,6 @@ Instructions to View and Test Project Part 1:
 5. Right click on LoginForm.jsp and click Run as -> 1 Run on Server
 (If you do not recieve the option to Run on Server, ensure that the project is a configured resource for the server)
 
-Created by:
+Created by: 
 Jeremy Kong (Jiangping Kong) | gc9384
 Ze Chen (Alex Chen)          | gw8607
