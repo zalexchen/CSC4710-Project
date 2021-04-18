@@ -123,6 +123,7 @@
                 <th>Posttime</th>
                 <th>Likes</th>
                 <th>Tags</th>
+                <th>Comments</th>
             </tr>
     		<c:forEach var="pair" items="${treemapImageAndTag}">
                 <tr>
@@ -135,6 +136,59 @@
                     <td><c:out value="${pair.key.posttime}" /></td>
                     <td><p>Likes:</p><c:out value="${pair.key.numLikes}" /></td>
                     <td><c:out value='${pair.value}'/></td>
+                    <td>
+                    
+                    	<table>
+                    		<td>
+			                    <c:set var="commented" value="false" />
+								<c:forEach var="imageid" items="${listComments}">
+								  	<c:if test="${imageid eq pair.key.imageid}">
+								    	<c:set var="commented" value="true" />
+								  	</c:if>
+								</c:forEach>
+								<c:choose>
+								
+								
+									<c:when test="${commented eq true}">
+										<!-- display edit and delete -->
+										<form action="showEditCommentForm?imageid=<c:out value='${pair.key.imageid}'/>" method="post">
+											<c:if test="${pair.key != null}">
+												<!--<c:out value='${pair.key.imageid}' />-->
+								            	<input type="hidden" name="imageid" id="imageid" value="<c:out value='${pair.key.imageid}' />" />
+								            </c:if>
+										    <input type="submit" value="edit" />
+										</form>
+										<form action="deleteComment?imageid=<c:out value='${pair.key.imageid}'/>" method="post">
+											<c:if test="${pair.key != null}">
+												<!--<c:out value='${pair.key.imageid}' />-->
+								            	<input type="hidden" name="imageid" id="imageid" value="<c:out value='${pair.key.imageid}' />" />
+								            </c:if>
+										    <input type="submit" value="delete" />
+										</form>
+									</c:when>
+									
+									
+									<c:otherwise>
+										<!-- display comment button -->
+										<form action="showCommentForm?imageid=<c:out value='${pair.key.imageid}'/>" method="post">
+											<c:if test="${pair.key != null}">
+												<!--<c:out value='${pair.key.imageid}' />-->
+								            	<input type="hidden" name="imageid" id="imageid" value="<c:out value='${pair.key.imageid}' />" />
+								            </c:if>
+										    <input type="submit" value="comment" />
+										</form>
+									</c:otherwise>
+									
+									
+								</c:choose>
+								</td>
+                    		
+                    			<c:forEach var="pare" items="${treemapImageAndComment[pair.key.imageid]}">
+                    				<tr><td><c:out value="${pare.description}"/></td></tr>	
+                    			</c:forEach>
+                    	</table>
+                    
+                    </td>
                     <td><a href="showEditImageForm?imageid=<c:out value='${pair.key.imageid}'/>">EDIT</a></td>
                     <td><a href="deleteImage?imageid=<c:out value='${pair.key.imageid}'/>">DELETE</a></td>
                     <td>

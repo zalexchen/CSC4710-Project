@@ -103,8 +103,23 @@ public class ControlServlet extends HttpServlet {
             case "/postImage":
             	postImage(request, response);
             	break;
+            case "/showCommentForm":
+            	showCommentForm(request, response);
+            	break;
+            case "/comment":
+            	commentOnImage(request, response);
+            	break;
+            case "/showEditCommentForm":
+            	showEditCommentForm(request, response);
+            	break;
+            case "/deleteComment":
+            	deleteComment(request, response);
+            	break;
             case "/showEditImageForm":
             	showEditImageForm(request, response);
+            	break;
+            case "/editComment":
+            	editComment(request, response);
             	break;
             case "/editImage":
             	editImage(request,response);
@@ -238,9 +253,22 @@ public class ControlServlet extends HttpServlet {
     	request.setAttribute("treemapImageAndTag", imageAndTag);
     	//request.setAttribute("listImage", listImage); //attach the list to the request
     	
-    	//Attach a list of users who liked that image
+    	// Add another hashmap, this time pairing the image with its comment list
+    	TreeMap<Integer, List<Comment>> imageidAndComments = new TreeMap<Integer, List<Comment>>();
+    	for(int i = 0; i < listImage.size(); i++) {
+    		List<Comment> existingCommentsList = UserDAO.getCommentsFromSingleImage(listImage.get(i).imageid);
+    		imageidAndComments.put(listImage.get(i).getImageid(), existingCommentsList);
+    	}
+    	
+    	request.setAttribute("treemapImageAndComment", imageidAndComments);
+    	
+    	//Attach a list with the imageids that the current user has liked
     	List<Integer> listLikes = UserDAO.listCurrentUserLikedImageIds((String)session.getAttribute("currentUserEmail"));
     	request.setAttribute("listLikes", listLikes);
+    	
+    	//Attach a list with the imageids that the current user has commented on
+    	List<Integer> listComments = UserDAO.listCurrentUserCommentedImageIds((String)session.getAttribute("currentUserEmail"));
+    	request.setAttribute("listComments", listComments);
     	
     	RequestDispatcher dispatcher = request.getRequestDispatcher("FeedPage.jsp");
     	dispatcher.forward(request, response); //throw it to the FeedPage to be displayed
@@ -432,6 +460,52 @@ public class ControlServlet extends HttpServlet {
         request.setAttribute("existingTagsString", existingTagsString);
         dispatcher.forward(request, response); // The forward() method works at server side, and It sends the same request and response objects to another servlet.
     }
+    
+    private void commentOnImage(HttpServletRequest request, HttpServletResponse response)
+    		throws ServletException, IOException, SQLException {
+    	System.out.println("Inside commentOnImage");
+    	int imageid = Integer.parseInt(request.getParameter("imageid"));
+        System.out.println(imageid);
+        String description = request.getParameter("description");
+        Comment newComment = new Comment((String)session.getAttribute("currentUserEmail"), imageid, description);
+        UserDAO.commentOnImage(newComment);
+        response.sendRedirect("showFeedPage");
+    }
+    
+    private void showCommentForm(HttpServletRequest request, HttpServletResponse response)
+    		throws ServletException, IOException, SQLException {
+    	System.out.println("Inside showCommentForm");
+    	int imageid = Integer.parseInt(request.getParameter("imageid"));
+    	request.setAttribute("imageid", imageid);
+    	RequestDispatcher dispatcher = request.getRequestDispatcher("CommentForm.jsp");
+        dispatcher.forward(request, response);
+    }
+    
+    private void showEditCommentForm(HttpServletRequest request, HttpServletResponse response)
+    		throws ServletException, IOException, SQLException {
+    	// get existing comment description
+    	Comment existingComment = UserDAO.getExistingCommentFromImage((String)session.getAttribute("currentUserEmail"), Integer.parseInt(request.getParameter("imageid")));
+    	request.setAttribute("existingComment", existingComment);
+    	RequestDispatcher dispatcher = request.getRequestDispatcher("EditCommentForm.jsp");
+        dispatcher.forward(request, response);
+    }
+
+    private void editComment(HttpServletRequest request, HttpServletResponse response)
+    		throws ServletException, IOException, SQLException {
+    	String email = (String)session.getAttribute("currentUserEmail");
+    	int imageid = Integer.parseInt(request.getParameter("imageid"));
+    	String description = request.getParameter("description");
+    	Comment editedComment = new Comment(email, imageid, description);
+    	UserDAO.editComment(editedComment);
+        response.sendRedirect("showFeedPage"); 
+    }
+    
+    private void deleteComment(HttpServletRequest request, HttpServletResponse response)
+    		throws ServletException, IOException, SQLException {
+    	UserDAO.deleteComment((String)session.getAttribute("currentUserEmail"), Integer.parseInt(request.getParameter("imageid")));
+        response.sendRedirect("showFeedPage"); 
+    }
+    
     /*
      * Project Part 3 Start
      */
@@ -563,13 +637,32 @@ public class ControlServlet extends HttpServlet {
     	System.out.println("Inside positiveUsers in ControlServlet");
     	request.setAttribute("headerTag", "Users");
     	
+    	List<User> listUser = UserDAO.positiveUsers();
+        request.setAttribute("listUser", listUser);
+    	
     	RequestDispatcher dispatcher = request.getRequestDispatcher("RootUserPage.jsp");
     	dispatcher.forward(request, response);
     }
     
     private void poorImages(HttpServletRequest request, HttpServletResponse response)
     		throws ServletException, IOException, SQLException {
-    	System.out.println("Inside poorUsers in ControlServlet");
+    	System.out.println("Inside poorImages in ControlServlet");
+    	List<Image> listImage = UserDAO.poorImages();
+    	//Create Treemap pairing the image data with the tag data
+    	TreeMap<Image, String> imageAndTag = new TreeMap<Image, String>(Collections.reverseOrder());
+    	for(int i = 0; i < listImage.size(); i++) {
+    		List<String> existingTagsList = UserDAO.getTagsFromSingleImage(listImage.get(i).imageid);
+            StringBuilder existingTags = new StringBuilder();
+            for(String tag : existingTagsList) {
+                existingTags.append(tag);
+                existingTags.append(",");
+            }
+            // Remove trailing comma
+            String existingTagsString = existingTags.length() > 0 ? existingTags.substring(0, existingTags.length() - 1) : "";
+            imageAndTag.put(listImage.get(i), existingTagsString);
+    	}
+    	
+    	request.setAttribute("treemapImageAndTag", imageAndTag);
     	request.setAttribute("headerTag", "Images");
     	
     	RequestDispatcher dispatcher = request.getRequestDispatcher("RootUserPage.jsp");
@@ -580,6 +673,9 @@ public class ControlServlet extends HttpServlet {
     		throws ServletException, IOException, SQLException {
     	System.out.println("Inside inactiveUsers in ControlServlet");
     	request.setAttribute("headerTag", "Users");
+    	
+    	List<User> listUser = UserDAO.inactiveUsers();
+        request.setAttribute("listUser", listUser);
     	
     	RequestDispatcher dispatcher = request.getRequestDispatcher("RootUserPage.jsp");
     	dispatcher.forward(request, response);

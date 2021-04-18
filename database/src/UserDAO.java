@@ -334,6 +334,18 @@ public class UserDAO {
     		preparedStatement.executeUpdate();
     		preparedStatement.close();
     	}
+    	
+    	String sql2 = "SELECT imageid FROM images WHERE imageid NOT IN (SELECT imageid FROM likes)";
+    	statement = connect.createStatement();
+    	resultSet = statement.executeQuery(sql2);
+    	while(resultSet.next()) {
+    		String sql = "UPDATE images set numLikes = 0 WHERE imageid = ?";
+    		preparedStatement = connect.prepareStatement(sql);
+    		preparedStatement.setInt(1, resultSet.getInt("imageid"));
+    		preparedStatement.executeUpdate();
+    		preparedStatement.close();
+    	}
+    	
     	System.out.println("Update Like Count Complete");
     }
     
@@ -544,30 +556,45 @@ public class UserDAO {
     
     public boolean postImage(Image image, List<String> tags) throws SQLException {
     	System.out.println("Inside postImage in UserDAO");
-    	connect_func();         
-		String sql1 = "INSERT INTO images(url, description, postuser, postdate, posttime) values (?, ?, ?, ?, ?)";
-		preparedStatement = (PreparedStatement) connect.prepareStatement(sql1);
-		preparedStatement.setString(1, image.url);
-		preparedStatement.setString(2, image.description);
-		preparedStatement.setString(3, image.postuser);
-		preparedStatement.setDate(4, image.postdate);
-		preparedStatement.setTimestamp(5, image.posttime);
-//		preparedStatement.executeUpdate();
-        boolean rowInserted = preparedStatement.executeUpdate() > 0;
-        System.out.println("Statement Executed");
-        preparedStatement.close();
-        
-        System.out.println("Now inserting tags for image... (First getting imageid of new image)");
-        for(int i = 0; i < tags.size(); i++) {
-            String sql3 = "SELECT last_insert_id()";
-            statement = connect.createStatement();
-            ResultSet resultSet = statement.executeQuery(sql3);
-            if(resultSet.next()) {
-            	insertTag(resultSet.getInt(1), tags.get(i));
-            }
-        }
-//        disconnect();
-        return rowInserted;
+    	connect_func();
+    	// Before insert, check if user has posted 5 already today
+    	String sql = "SELECT postuser FROM images WHERE postdate = CURDATE() GROUP BY postuser HAVING count(*) >= 5";
+    	statement = connect.createStatement();
+    	ResultSet resultSet = statement.executeQuery(sql);
+    	List<String> maxedUsers = new ArrayList<String>();
+    	while(resultSet.next()) {
+    		maxedUsers.add(resultSet.getString("postuser"));
+    	}
+    	if (maxedUsers.contains(image.postuser)) {
+    		System.out.println("CANNOT INSERT NEW IMAGE: POST LIMIT REACHED");
+    		return false;
+    	}
+    	else {
+			String sql1 = "INSERT INTO images(url, description, postuser, postdate, posttime, numLikes) values (?, ?, ?, ?, ?, ?)";
+			preparedStatement = (PreparedStatement) connect.prepareStatement(sql1);
+			preparedStatement.setString(1, image.url);
+			preparedStatement.setString(2, image.description);
+			preparedStatement.setString(3, image.postuser);
+			preparedStatement.setDate(4, image.postdate);
+			preparedStatement.setTimestamp(5, image.posttime);
+			preparedStatement.setInt(6, image.numLikes);
+	//		preparedStatement.executeUpdate();
+	        boolean rowInserted = preparedStatement.executeUpdate() > 0;
+	        System.out.println("Statement Executed");
+	        preparedStatement.close();
+	        
+	        System.out.println("Now inserting tags for image... (First getting imageid of new image)");
+	        for(int i = 0; i < tags.size(); i++) {
+	            String sql3 = "SELECT last_insert_id()";
+	            statement = connect.createStatement();
+	            resultSet = statement.executeQuery(sql3);
+	            if(resultSet.next()) {
+	            	insertTag(resultSet.getInt(1), tags.get(i));
+	            }
+	        }
+	//        disconnect();
+	        return rowInserted;
+    	}
     }
     
     public boolean editImage(Image image, List<String> tags) throws SQLException {
@@ -680,6 +707,18 @@ public class UserDAO {
     public boolean likeImage(String email, int imageid) throws SQLException {
     	System.out.println("Inside likeImage in UserDAO");
     	connect_func();
+    	// Before insert into likes check if like limit is reached
+    	String sql = "SELECT email FROM likes WHERE likedate = CURDATE() GROUP BY email HAVING count(imageid) >= 3";
+    	statement = connect.createStatement();
+    	ResultSet resultSet = statement.executeQuery(sql);
+    	List<String> maxedUsers = new ArrayList<String>();
+    	while(resultSet.next()) {
+    		maxedUsers.add(resultSet.getString("email"));
+    	}
+    	if (maxedUsers.contains(email)) {
+    		System.out.println("CANNOT LIKE IMAGE: LIKE LIMIT REACHED");
+    		return false;
+    	}
     	String sql1 = "INSERT INTO likes(email, imageid, likedate) values (?, ?, ?)";
     	preparedStatement = connect.prepareStatement(sql1);
     	preparedStatement.setString(1, email);
@@ -935,6 +974,190 @@ public class UserDAO {
         statement.close();         
         disconnect();
         return listTags;
+    }
+    
+    public List<User> positiveUsers() throws SQLException {
+    	List<User> listUsers = new ArrayList<User>();        
+        String sql = "SELECT * FROM users WHERE email in ("
+        		+ "SELECT followeremail FROM follow GROUP BY followeremail HAVING count(followingemail) >= 5"
+        		+ ")";      
+        connect_func();      
+        statement =  (Statement) connect.createStatement();
+        ResultSet resultSet = statement.executeQuery(sql);
+         
+        while (resultSet.next()) {
+            String email = resultSet.getString("email");
+            String password = resultSet.getString("password");
+            Date birthday = resultSet.getDate("birthday");
+            String firstName = resultSet.getString("firstName");
+            String lastName = resultSet.getString("lastName");
+            String gender = resultSet.getString("gender");
+            int numFollowers = resultSet.getInt("numFollowers");
+            int numFollowing = resultSet.getInt("numFollowing");
+             
+            User newUser = new User(email, password, birthday, firstName, lastName, gender, numFollowers, numFollowing);
+            listUsers.add(newUser);
+        }     
+        resultSet.close();
+        statement.close();         
+        disconnect();
+        return listUsers;
+    }
+    
+    public List<Image> poorImages() throws SQLException {
+    	System.out.println("Inside poorImages() in UserDAO");
+    	List<Image> listImage = new ArrayList<Image>();
+    	connect_func();
+    	String sql1 = "SELECT * FROM images I "
+    			+ "WHERE I.imageid NOT IN ("
+    			+ "(SELECT L.imageid "
+    			+ "FROM likes L, images I "
+    			+ "WHERE L.imageid = I.imageid) "
+    			+ "UNION "
+    			+ "(SELECT C.imageid "
+    			+ "FROM comments C, images I "
+    			+ "WHERE C.imageid = I.imageid))";
+    	statement = connect.createStatement();
+        ResultSet resultSet = statement.executeQuery(sql1);
+    	
+    	while(resultSet.next()) {
+    		int imageid = resultSet.getInt("imageid");
+    		String url = resultSet.getString("url");
+    		String description = resultSet.getString("description");
+    		String postuser = resultSet.getString("postuser");
+    		Date postdate = resultSet.getDate("postdate");
+    		Timestamp posttime = resultSet.getTimestamp("posttime");
+    		int numLikes = resultSet.getInt("numLikes");
+    		Image newImage = new Image(imageid, url, description, postuser, postdate, posttime, numLikes);
+    		listImage.add(newImage);
+    		System.out.println("Added an image to listImage in poorImages()");
+    	}
+    	System.out.println("End poorImages() in UserDAO");
+    	return listImage;
+    }
+    
+    public List<User> inactiveUsers() throws SQLException {
+    	List<User> listUsers = new ArrayList<User>();        
+        String sql = "SELECT * FROM users WHERE email not in ("
+        		+ "SELECT distinct(postuser) FROM images "
+        		+ "UNION distinct "
+        		+ "SELECT distinct(email) FROM likes "
+        		+ "UNION distinct "
+        		+ "SELECT distinct(followeremail) FROM follow "
+        		+ "UNION distinct "
+        		+ "SELECT distinct(email) FROM comments)";      
+        connect_func();      
+        statement =  (Statement) connect.createStatement();
+        ResultSet resultSet = statement.executeQuery(sql);
+         
+        while (resultSet.next()) {
+            String email = resultSet.getString("email");
+            String password = resultSet.getString("password");
+            Date birthday = resultSet.getDate("birthday");
+            String firstName = resultSet.getString("firstName");
+            String lastName = resultSet.getString("lastName");
+            String gender = resultSet.getString("gender");
+            int numFollowers = resultSet.getInt("numFollowers");
+            int numFollowing = resultSet.getInt("numFollowing");
+             
+            User newUser = new User(email, password, birthday, firstName, lastName, gender, numFollowers, numFollowing);
+            listUsers.add(newUser);
+        }     
+        resultSet.close();
+        statement.close();         
+        disconnect();
+        return listUsers;
+    }
+    
+    public List<Comment> getCommentsFromSingleImage(int imageid) throws SQLException {
+    	System.out.println("Inside getCommentsFromSingleImage");
+    	List<Comment> listComments = new ArrayList<Comment>();
+    	connect_func();
+    	String sql1 = "SELECT * FROM comments WHERE imageid = ?";
+    	preparedStatement = connect.prepareStatement(sql1);
+    	preparedStatement.setInt(1, imageid);
+    	ResultSet resultSet = preparedStatement.executeQuery();
+    	while(resultSet.next()) {
+    		System.out.println("Got comment, adding to list");
+    		String email = resultSet.getString("email");
+    		int imgid = resultSet.getInt("imageid");
+    		String description = resultSet.getString("description");
+    		Comment newComment = new Comment(email, imgid, description);
+    		listComments.add(newComment);
+    	}
+    	return listComments;
+    }
+    
+    public List<Integer> listCurrentUserCommentedImageIds(String currentUserEmail) throws SQLException{
+    	System.out.println("Inside listCurrentUserCommentedImageIds in UserDAO");
+    	List<Integer> listCommentedImageIds = new ArrayList<Integer>();
+    	connect_func();
+    	String sql1 = "SELECT imageid FROM comments " +
+    			"WHERE email = ?";
+    	preparedStatement = connect.prepareStatement(sql1);
+    	preparedStatement.setString(1, currentUserEmail);
+    	ResultSet resultSet = preparedStatement.executeQuery();
+    	System.out.println("Statement Executed");
+    	while(resultSet.next()) {
+    		listCommentedImageIds.add(resultSet.getInt("imageid"));
+    	}
+    	return listCommentedImageIds;
+    }
+    
+    public boolean commentOnImage(Comment newComment) throws SQLException {
+    	System.out.println("Inside commentOnImage in UserDAO");
+    	connect_func();
+    	String sql1 = "INSERT INTO comments(email, imageid, description) values (?, ?, ?)";
+		preparedStatement = (PreparedStatement) connect.prepareStatement(sql1);
+		preparedStatement.setString(1, newComment.email);
+		preparedStatement.setInt(2, newComment.imageid);
+		preparedStatement.setString(3, newComment.description);
+//		preparedStatement.executeUpdate();
+        boolean rowInserted = preparedStatement.executeUpdate() > 0;
+        System.out.println("Statement Executed");
+        preparedStatement.close();
+        return rowInserted;
+    }
+    
+    public Comment getExistingCommentFromImage(String currentuser, int imageid) throws SQLException {
+    	System.out.println("Inside getExistingCommentFromImage in UserDAO");
+    	connect_func();
+    	String sql1 = "SELECT * FROM comments WHERE email = ? AND imageid = ?";
+    	preparedStatement = (PreparedStatement) connect.prepareStatement(sql1);
+    	preparedStatement.setString(1, currentuser);
+    	preparedStatement.setInt(2, imageid);
+    	ResultSet resultSet = preparedStatement.executeQuery();
+    	if(resultSet.next()) {
+    		String email = resultSet.getString("email");
+    		int imgid = resultSet.getInt("imageid");
+    		String description = resultSet.getString("description");
+    		return new Comment(email, imgid, description);
+    	}
+    	return null;
+    }
+    
+    public boolean editComment(Comment editedComment) throws SQLException {
+    	System.out.println("editComment in UserDAO");
+    	connect_func();
+    	String sql1 = "UPDATE comments set description = ? WHERE email = ? AND imageid = ?";
+    	preparedStatement = (PreparedStatement) connect.prepareStatement(sql1);
+    	preparedStatement.setString(1, editedComment.description);
+    	preparedStatement.setString(2, editedComment.email);
+    	preparedStatement.setInt(3, editedComment.imageid);
+    	boolean update = preparedStatement.executeUpdate() > 0;
+    	preparedStatement.close();
+    	return update;
+    }
+    
+    public boolean deleteComment(String email, int imageid) throws SQLException {
+    	System.out.println("deleteComment in UserDAO");
+    	String sql1 = "DELETE FROM comments WHERE email = ? AND imageid = ?";
+    	preparedStatement = (PreparedStatement) connect.prepareStatement(sql1);
+    	preparedStatement.setString(1, email);
+    	preparedStatement.setInt(2, imageid);
+    	boolean update = preparedStatement.executeUpdate() > 0;
+    	preparedStatement.close();
+    	return update;
     }
 }
 
