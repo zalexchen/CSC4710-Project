@@ -266,13 +266,13 @@ public class UserDAO {
         String sql3 = "INSERT INTO Images(imageid, url, description, postuser, postdate, posttime, numLikes) VALUES"
         		+ " (1, 'https://picsum.photos/id/1/200/300', '1st Picture', 'test@wayne', STR_TO_DATE('17-04-2001','%d-%m-%Y'), CURDATE(), 0),"
         		+ "(2, 'https://picsum.photos/id/2/200/300', '2nd Picture', 'guy@wayne', STR_TO_DATE('17-04-2021','%d-%m-%Y'), CURDATE(), 0),"
-        		+ "(3, 'https://picsum.photos/id/3/200/300', '3rd Picture', 'something@gmail', STR_TO_DATE('18-04-2021','%d-%m-%Y'), CURDATE(), 0),"
+        		+ "(3, 'https://picsum.photos/id/3/200/300', '3rd Picture', 'something@gmail', STR_TO_DATE('19-04-2021','%d-%m-%Y'), CURDATE(), 0),"
         		+ "(4, 'https://picsum.photos/id/4/200/300', '4th Picture', 'test@wayne', STR_TO_DATE('17-04-2001','%d-%m-%Y'), CURDATE(), 0),"
         		+ "(5, 'https://picsum.photos/id/5/200/300', '5th Picture', 'guy@wayne', STR_TO_DATE('17-04-2021','%d-%m-%Y'), CURDATE(), 0),"
         		+ "(6, 'https://picsum.photos/id/6/200/300', '6th Picture', 'something@gmail', STR_TO_DATE('17-04-2001','%d-%m-%Y'), CURDATE(), 0),"
         		+ "(7, 'https://picsum.photos/id/7/200/300', '7th Picture', 'alex@outlook', STR_TO_DATE('18-04-2021','%d-%m-%Y'), CURDATE(), 0),"
         		+ "(8, 'https://picsum.photos/id/8/200/300', '8th Picture', 'person@protect', STR_TO_DATE('17-04-2001','%d-%m-%Y'), CURDATE(), 0),"
-        		+ "(9, 'https://picsum.photos/id/9/200/300', '9th Picture', 'programmer@gmail', STR_TO_DATE('18-04-2021','%d-%m-%Y'), CURDATE(), 0),"
+        		+ "(9, 'https://picsum.photos/id/9/200/300', '9th Picture', 'programmer@gmail', STR_TO_DATE('19-04-2021','%d-%m-%Y'), CURDATE(), 0),"
         		+ "(10, 'https://picsum.photos/id/10/200/300', '10th Picture', 'random@gmail', STR_TO_DATE('17-04-2001','%d-%m-%Y'), CURDATE(), 0)";
 
         statement = connect.createStatement();
@@ -978,9 +978,21 @@ public class UserDAO {
     
     public List<User> positiveUsers() throws SQLException {
     	List<User> listUsers = new ArrayList<User>();        
-        String sql = "SELECT * FROM users WHERE email in ("
-        		+ "SELECT followeremail FROM follow GROUP BY followeremail HAVING count(followingemail) >= 5"
-        		+ ")";      
+        String sql = "SELECT * "
+        		+ "FROM users u "
+        		+ "WHERE ( "
+        		+ "SELECT count(*) "
+        		+ "FROM likes l "
+        		+ "WHERE l.email = u.email AND l.imageid IN( "
+        		+ "	SELECT i.imageid "
+        		+ "	FROM images i "
+        		+ "	WHERE i.postuser in ( "
+        		+ "	SELECT followingemail FROM follow WHERE followeremail = u.email))) "
+        		+ "= "
+        		+ "(SELECT count(i.imageid) "
+        		+ "FROM images i "
+        		+ "WHERE i.postuser in ( "
+        		+ "	SELECT followingemail FROM follow WHERE followeremail = u.email))";      
         connect_func();      
         statement =  (Statement) connect.createStatement();
         ResultSet resultSet = statement.executeQuery(sql);
